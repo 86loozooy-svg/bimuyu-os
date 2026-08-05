@@ -4,12 +4,12 @@
 <article class="case-detail">
   <div class="container">
     <h1>{{ case.title }}</h1>
-    <p class="case-meta">{% if case.category %}{{ case.category }} · {% endif %}{{ case.area }} · {{ case.year }} · {{ case.location }}</p>
-    <p class="case-summary">{{ case.summary }}</p>
+    <p class="case-meta">{{ case.subtitle }}</p>
+    <p class="case-summary">{{ case.description }}</p>
 
     <div class="case-gallery">
-      {% for img in case.images %}
-      <img src="{{ img }}" alt="{{ case.title }}" class="detail-img">
+      {% for img in images %}
+      <img src="{{ img.image_path }}" alt="{{ img.caption or case.title }}" class="detail-img">
       {% endfor %}
     </div>
 

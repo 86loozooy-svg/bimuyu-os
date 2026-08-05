@@ -6,13 +6,13 @@
     <h1 class="page-title">案例展示 <span>Projects</span></h1>
     <div class="cases-grid">
       {% for case in cases %}
-      <a href="/cases/{{ case.id }}" class="case-card">
-        <div class="case-img">
-          <img src="{{ case.cover }}" alt="{{ case.title }}">
-        </div>
-        <div class="case-info">
-          <h3>{{ case.title }}</h3>
-          <p>{{ case.area }} · {{ case.year }}</p>
+      <a href="/cases/{{ case.slug }}" class="case-card">
+          <div class="case-img">
+            <img src="{{ case.cover_image }}" alt="{{ case.title }}">
+          </div>
+          <div class="case-info">
+            <h3>{{ case.title }}</h3>
+            <p>{{ case.subtitle }}</p>
           <span class="case-more">...more</span>
         </div>
       </a>

@@ -1,10 +1,6 @@
-import json
-from pathlib import Path
-
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import BASE_DIR
@@ -41,35 +37,6 @@ class AppAuthMiddleware(BaseHTTPMiddleware):
 
 
 app.add_middleware(AppAuthMiddleware)
-
-# --- JSON-based case detail (registered before router so /cases/{int} matches first) ---
-templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
-CASES_PATH = BASE_DIR / "data" / "cases.json"
-
-
-def load_cases() -> list:
-    if CASES_PATH.exists():
-        return json.loads(CASES_PATH.read_text(encoding="utf-8"))
-    return []
-
-
-@app.get("/cases", response_class=HTMLResponse)
-async def cases_list(request: Request):
-    cases = load_cases()
-    return templates.TemplateResponse(
-        "public/cases.html", {"request": request, "cases": cases}
-    )
-
-
-@app.get("/cases/{case_id}", response_class=HTMLResponse)
-async def case_detail(request: Request, case_id: int):
-    cases = load_cases()
-    case = next((c for c in cases if c["id"] == case_id), None)
-    if not case:
-        raise HTTPException(status_code=404, detail="案例不存在")
-    return templates.TemplateResponse(
-        "public/case_detail.html", {"request": request, "case": case}
-    )
 
 app.include_router(public.router)
 app.include_router(app_auth.router)

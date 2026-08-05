@@ -22,38 +22,16 @@
   <div class="container">
     <h2 class="section-title">案例展示 <span>Project</span></h2>
     <div class="cases-grid">
-      <a href="/cases/1" class="case-card">
-        <div class="case-img"><img src="/static/images/cases/case-01.jpg" alt="YUJIA COFFEE"></div>
+      {% for case in cases %}
+      <a href="/cases/{{ case.slug }}" class="case-card">
+        <div class="case-img"><img src="{{ case.cover_image }}" alt="{{ case.title }}"></div>
         <div class="case-info">
-          <h3>YUJIA COFFEE</h3>
-          <p>面积: 120m² · 年份: 2024</p>
+          <h3>{{ case.title }}</h3>
+          <p>{{ case.subtitle }}</p>
           <span class="case-more">...more</span>
         </div>
       </a>
-      <a href="/cases/2" class="case-card">
-        <div class="case-img"><img src="/static/images/cases/case-02.jpg" alt="项目二"></div>
-        <div class="case-info">
-          <h3>项目二</h3>
-          <p>面积: 80m² · 年份: 2024</p>
-          <span class="case-more">...more</span>
-        </div>
-      </a>
-      <a href="/cases/3" class="case-card">
-        <div class="case-img"><img src="/static/images/cases/case-03.jpg" alt="项目三"></div>
-        <div class="case-info">
-          <h3>项目三</h3>
-          <p>面积: 200m² · 年份: 2023</p>
-          <span class="case-more">...more</span>
-        </div>
-      </a>
-      <a href="/cases/4" class="case-card">
-        <div class="case-img"><img src="/static/images/cases/case-04.jpg" alt="项目四"></div>
-        <div class="case-info">
-          <h3>项目四</h3>
-          <p>面积: 60m² · 年份: 2023</p>
-          <span class="case-more">...more</span>
-        </div>
-      </a>
+      {% endfor %}
     </div>
   </div>
 </section>
