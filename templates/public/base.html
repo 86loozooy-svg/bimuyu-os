@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ studio.name or 'Studio OS' }}{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container nav-three-col">
+      <nav class="nav-left">
+        <a href="/">首页</a>
+        <a href="/cases">案例</a>
+      </nav>
+
+      <a href="/" class="logo-center">
+        <img src="/static/img/logo.png" alt="Studio OS" class="brand-logo">
+      </a>
+
+      <nav class="nav-right">
+        <a href="/about">关于</a>
+        <a href="/app" class="btn-pill">工作台</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>{% block content %}{% endblock %}</main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <h4>首页</h4>
+        </div>
+        <div class="footer-col">
+          <h4>关于</h4>
+          <a href="/about">公司介绍</a>
+        </div>
+        <div class="footer-col">
+          <h4>案例</h4>
+          <a href="/cases">视觉设计</a>
+          <a href="/cases">空间设计</a>
+          <a href="/cases">文创展示</a>
+        </div>
+        <div class="footer-col">
+          <h4>工作台</h4>
+          <a href="/app">登入</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div class="footer-brand">Studio OS</div>
+        <div class="footer-social">
+          <a href="tel:YOUR_PHONE" title="电话">☎</a>
+          <a href="weixin://" title="微信">微</a>
+          <a href="https://www.xiaohongshu.com" title="小红书">红</a>
+          <a href="https://www.douyin.com" title="抖音">抖</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

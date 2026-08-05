@@ -1,0 +1,55 @@
+[
+  {
+    "id": 1,
+    "slug": "yuijia-coffee",
+    "title": "YUJIA COFFEE",
+    "category": "品牌零售",
+    "area": "120m²",
+    "year": "2024",
+    "location": "上海",
+    "summary": "品牌咖啡店空间设计，强调材质温度与动线效率。",
+    "cover": "/static/images/cases/case-01.jpg",
+    "images": [
+      "/static/images/cases/case-01.jpg",
+      "/static/images/cases/case-01-02.jpg",
+      "/static/images/cases/case-01-03.jpg"
+    ]
+  },
+  {
+    "id": 2,
+    "slug": "project-2",
+    "title": "项目二",
+    "category": "工装空间",
+    "area": "80m²",
+    "year": "2024",
+    "location": "杭州",
+    "summary": "简述。",
+    "cover": "/static/images/cases/case-02.jpg",
+    "images": [
+      "/static/images/cases/case-02.jpg",
+      "/static/images/cases/case-02-02.jpg"
+    ]
+  },
+  {
+    "id": 3,
+    "slug": "project-3",
+    "title": "项目三",
+    "area": "200m²",
+    "year": "2023",
+    "location": "苏州",
+    "summary": "简述。",
+    "cover": "/static/images/cases/case-03.jpg",
+    "images": ["/static/images/cases/case-03.jpg"]
+  },
+  {
+    "id": 4,
+    "slug": "project-4",
+    "title": "项目四",
+    "area": "60m²",
+    "year": "2023",
+    "location": "南京",
+    "summary": "简述。",
+    "cover": "/static/images/cases/case-04.jpg",
+    "images": ["/static/images/cases/case-04.jpg"]
+  }
+]

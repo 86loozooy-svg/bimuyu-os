@@ -1,0 +1,192 @@
+{% extends "app/base.html" %}
+{% block title %}{{ project.name }} — Studio OS{% endblock %}
+{% block content %}
+<div class="app-header">
+  <div>
+    <h1>{{ project.name }}</h1>
+    <p style="color:var(--muted);font-size:.875rem;margin-top:4px">
+      {{ project.code }} · {{ project.client_name or '无客户' }} ·
+      <span class="badge">{{ status_labels.get(project.status, project.status) }}</span>
+    </p>
+  </div>
+  <a href="/app/projects" class="btn btn-outline">← 返回列表</a>
+</div>
+
+<div class="tabs">
+  <a class="tab {% if tab == 'overview' %}active{% endif %}" href="?tab=overview">概览</a>
+  <a class="tab {% if tab == 'brief' %}active{% endif %}" href="?tab=brief">Brief</a>
+  {% if user.role != 'installer' %}
+  <a class="tab {% if tab == 'quote' %}active{% endif %}" href="?tab=quote">报价</a>
+  {% endif %}
+  <a class="tab {% if tab == 'execution' %}active{% endif %}" href="?tab=execution">执行</a>
+  {% if show_finance %}
+  <a class="tab {% if tab == 'finance' %}active{% endif %}" href="?tab=finance">财务 🔒</a>
+  {% endif %}
+</div>
+
+{% if tab == 'overview' %}
+<div class="card">
+  <h3 style="margin-bottom:16px">项目信息</h3>
+  <p><strong>行业：</strong>{{ project.industry or '—' }}</p>
+  <p><strong>面积：</strong>{{ project.area or '—' }} ㎡</p>
+  <p><strong>预算：</strong>
+    {% if project.budget_min %}¥{{ '{:,.0f}'.format(project.budget_min) }}{% endif %}
+    {% if project.budget_max %} — ¥{{ '{:,.0f}'.format(project.budget_max) }}{% endif %}
+    {% if not project.budget_min and not project.budget_max %}—{% endif %}
+  </p>
+  <p><strong>开始：</strong>{{ project.start_date or '—' }} · <strong>截止：</strong>{{ project.deadline or '—' }}</p>
+</div>
+{% if milestones %}
+<div class="card">
+  <h3 style="margin-bottom:16px">时间轴</h3>
+  <table>
+    <thead><tr><th>里程碑</th><th>截止</th><th>状态</th></tr></thead>
+    <tbody>
+      {% for m in milestones %}
+      <tr>
+        <td>{{ m.name }}</td>
+        <td>{{ m.due_date or '—' }}</td>
+        <td>{% if m.done %}✓ 完成{% else %}进行中{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% elif tab == 'brief' %}
+<div class="card">
+  <form method="post" action="/app/projects/{{ project.id }}/brief">
+    <div class="form-group">
+      <label>项目 Brief（Markdown）</label>
+      <textarea name="brief_md" rows="16" style="font-family:monospace">{{ project.brief_md or '' }}</textarea>
+    </div>
+    <button type="submit" class="btn">保存 Brief</button>
+  </form>
+</div>
+
+{% elif tab == 'quote' %}
+<div class="card">
+  <h3 style="margin-bottom:16px">新建报价</h3>
+  <form method="post" action="/app/projects/{{ project.id }}/quote/new" style="display:flex;gap:12px;align-items:end">
+    <div class="form-group" style="margin:0;flex:1">
+      <label>选择 BOQ 模板</label>
+      <select name="template_id" required>
+        {% for t in boq_templates %}
+        <option value="{{ t.id }}">{{ t.name }} ({{ t.project_type }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn">创建报价</button>
+  </form>
+</div>
+
+{% set active_quote_id = request.query_params.get('quote_id') %}
+
+{% if active_quote %}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <h3>报价 v{{ active_quote.version }} · {{ active_quote.template_name or '' }}</h3>
+    <a href="/app/projects/{{ project.id }}/quote/{{ active_quote.id }}/pdf" class="btn btn-outline">导出 PDF</a>
+  </div>
+  <form method="post" action="/app/projects/{{ project.id }}/quote/{{ active_quote.id }}/update">
+    {% for group in active_quote.parsed_detail.groups %}
+    {% set gi = loop.index0 %}
+    <h4 style="margin:16px 0 8px;color:var(--accent)">{{ group.name }}</h4>
+    <table>
+      <thead><tr><th>项目</th><th>单位</th><th>单价</th><th>数量</th><th>小计</th></tr></thead>
+      <tbody>
+        {% for item in group.items %}
+        <tr>
+          <td>{{ item.name }}</td>
+          <td>{{ item.unit }}</td>
+          <td>¥{{ '{:,.2f}'.format(item.unit_price) }}</td>
+          <td><input type="number" name="qty_{{ gi }}_{{ loop.index0 }}" value="{{ item.quantity or 0 }}" step="0.01" style="width:80px"></td>
+          <td>¥{{ '{:,.2f}'.format((item.quantity or 0) * item.unit_price) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endfor %}
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+      <p>直接成本：¥{{ '{:,.2f}'.format(active_quote.direct_cost or 0) }}</p>
+      <p style="font-size:1.1rem;font-weight:600;margin-top:8px">总计：¥{{ '{:,.2f}'.format(active_quote.total or 0) }}</p>
+      <p style="font-size:.8rem;color:var(--muted)">
+        含设计费 {{ active_quote.design_fee_pct }}% · 管理费 {{ active_quote.management_fee_pct }}% ·
+        税 {{ active_quote.tax_pct }}% · 利润 {{ active_quote.margin_pct }}%
+      </p>
+    </div>
+    <button type="submit" class="btn" style="margin-top:16px">重新计算并保存</button>
+  </form>
+</div>
+{% elif quotes %}
+<p style="color:var(--muted)">点击上方创建第一个报价</p>
+{% endif %}
+
+{% if quotes|length > 1 %}
+<div class="card">
+  <h4 style="margin-bottom:12px">历史版本</h4>
+  {% for q in quotes %}
+  <a href="?tab=quote&quote_id={{ q.id }}" style="margin-right:16px">v{{ q.version }}</a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% elif tab == 'execution' %}
+<div class="card">
+  <h3 style="margin-bottom:16px">客户反馈</h3>
+  <form method="post" action="/app/projects/{{ project.id }}/feedback">
+    <div class="form-group">
+      <label>原始反馈</label>
+      <textarea name="raw_input" required placeholder="粘贴客户微信/邮件内容"></textarea>
+    </div>
+    <div class="form-group">
+      <label>分类</label>
+      <select name="category">
+        <option value="aesthetic">审美偏好</option>
+        <option value="functional">功能性修改</option>
+        <option value="addition">新增需求</option>
+        <option value="free">其他</option>
+      </select>
+    </div>
+    <button type="submit" class="btn">记录反馈</button>
+  </form>
+</div>
+{% if feedback %}
+<div class="card">
+  <table>
+    <thead><tr><th>时间</th><th>分类</th><th>内容</th></tr></thead>
+    <tbody>
+      {% for f in feedback %}
+      <tr>
+        <td style="white-space:nowrap">{{ f.created_at[:10] if f.created_at else '' }}</td>
+        <td><span class="badge">{{ f.category }}</span></td>
+        <td>{{ f.raw_input[:100] }}{% if f.raw_input|length > 100 %}…{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% elif tab == 'finance' and show_finance %}
+<div class="card">
+  <h3 style="margin-bottom:16px">收款计划</h3>
+  <table>
+    <thead><tr><th>类型</th><th>金额</th><th>到期</th><th>状态</th></tr></thead>
+    <tbody>
+      {% for inv in invoices %}
+      <tr>
+        <td>{{ inv.type }}</td>
+        <td>¥{{ '{:,.2f}'.format(inv.amount) }}</td>
+        <td>{{ inv.due_date or '—' }}</td>
+        <td>{% if inv.paid %}✓ 已收{% else %}待收{% endif %}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" style="color:var(--muted)">暂无收款计划</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

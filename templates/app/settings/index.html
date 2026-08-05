@@ -1,0 +1,148 @@
+{% extends "app/base.html" %}
+{% block title %}设置 — Studio OS{% endblock %}
+{% block content %}
+<div class="app-header"><h1>设置</h1></div>
+
+<div class="tabs">
+  <a class="tab {% if tab == 'profile' %}active{% endif %}" href="?tab=profile">工作室档案</a>
+  <a class="tab {% if tab == 'members' %}active{% endif %}" href="?tab=members">成员与权限</a>
+  <a class="tab {% if tab == 'public' %}active{% endif %}" href="?tab=public">公开站管理</a>
+</div>
+
+{% if tab == 'profile' %}
+<div class="card">
+  <form method="post" action="/app/settings/profile">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="form-group"><label>工作室名称</label><input name="name" value="{{ studio.name or '' }}"></div>
+      <div class="form-group"><label>地址</label><input name="address" value="{{ studio.address or '' }}"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>简介</label><textarea name="description">{{ studio.description or '' }}</textarea></div>
+      <div class="form-group"><label>税号</label><input name="tax_id" value="{{ studio.tax_id or '' }}"></div>
+      <div class="form-group"><label>银行账户</label><input name="bank_account" value="{{ studio.bank_account or '' }}"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>邮件签名</label><textarea name="email_signature">{{ studio.email_signature or '' }}</textarea></div>
+      <div class="form-group" style="grid-column:1/-1"><label>改稿政策</label><input name="revision_policy" value="{{ studio.revision_policy or '' }}"></div>
+    </div>
+    <h4 style="margin:24px 0 12px">默认定价基准 (%)</h4>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+      <div class="form-group"><label>设计费</label><input type="number" name="default_design_fee_pct" value="{{ studio.default_design_fee_pct or 15 }}" step="0.1"></div>
+      <div class="form-group"><label>管理费</label><input type="number" name="default_management_fee_pct" value="{{ studio.default_management_fee_pct or 8 }}" step="0.1"></div>
+      <div class="form-group"><label>税</label><input type="number" name="default_tax_pct" value="{{ studio.default_tax_pct or 6 }}" step="0.1"></div>
+      <div class="form-group"><label>利润</label><input type="number" name="default_margin_pct" value="{{ studio.default_margin_pct or 25 }}" step="0.1"></div>
+    </div>
+    <button type="submit" class="btn" style="margin-top:20px">保存</button>
+  </form>
+</div>
+
+{% elif tab == 'members' %}
+{% if request.query_params.get('invite_token') %}
+<div class="card" style="background:var(--accent-light)">
+  <p><strong>邀请已创建</strong></p>
+  <p style="font-size:.875rem;margin-top:8px">邀请链接：<code>/app/accept-invite?token={{ request.query_params.get('invite_token') }}</code></p>
+  <p style="font-size:.875rem">临时密码：<code>{{ request.query_params.get('temp_pass') }}</code>（请告知协作者并让其修改）</p>
+</div>
+{% endif %}
+<div class="card">
+  <h3 style="margin-bottom:16px">邀请协作者</h3>
+  <form method="post" action="/app/settings/collaborators/invite" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;align-items:end">
+    <div class="form-group" style="margin:0"><label>邮箱</label><input type="email" name="email" required></div>
+    <div class="form-group" style="margin:0"><label>显示名</label><input name="display_name"></div>
+    <div class="form-group" style="margin:0"><label>角色</label>
+      <select name="role"><option value="editor">editor</option><option value="viewer">viewer</option><option value="installer">installer</option></select>
+    </div>
+    <div class="form-group" style="margin:0"><label>项目 ID (JSON)</label><input name="project_ids" value="[1]" placeholder='[1,2]'></div>
+    <div class="form-group" style="margin:0"><label>有效天数</label><input type="number" name="expires_days" value="30"></div>
+    <button type="submit" class="btn">邀请</button>
+  </form>
+</div>
+<div class="card">
+  <table>
+    <thead><tr><th>邮箱</th><th>名称</th><th>角色</th><th>项目权限</th><th></th></tr></thead>
+    <tbody>
+      {% for c in collaborators %}
+      <tr>
+        <td>{{ c.email }}</td><td>{{ c.display_name or '—' }}</td><td><span class="badge">{{ c.role }}</span></td>
+        <td>{{ c.project_ids or '全部' }}</td>
+        <td>
+          {% if c.role != 'admin' %}
+          <form method="post" action="/app/settings/collaborators/{{ c.id }}/revoke" style="display:inline">
+            <button type="submit" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:.8rem">撤销</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% if audit %}
+<div class="card">
+  <h4 style="margin-bottom:12px">操作日志</h4>
+  <table>
+    <thead><tr><th>时间</th><th>操作者</th><th>动作</th><th>详情</th></tr></thead>
+    <tbody>
+      {% for a in audit[:20] %}
+      <tr>
+        <td>{{ a.created_at[:16] if a.created_at else '' }}</td>
+        <td>{{ a.display_name or a.email or '—' }}</td>
+        <td>{{ a.action }}</td>
+        <td>{{ a.detail or '' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% elif tab == 'public' %}
+<div class="card">
+  <h3 style="margin-bottom:16px">联系方式 (contact.json)</h3>
+  <form method="post" action="/app/settings/contact">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label>微信 ID</label><input name="wechat" value="{{ contact.wechat or '' }}"></div>
+      <div class="form-group"><label>电话</label><input name="phone" value="{{ contact.phone or '' }}"></div>
+      <div class="form-group"><label>小红书 URL</label><input name="xiaohongshu_url" value="{{ contact.xiaohongshu_url or '' }}"></div>
+      <div class="form-group"><label>抖音 URL</label><input name="douyin_url" value="{{ contact.douyin_url or '' }}"></div>
+    </div>
+    <button type="submit" class="btn">保存联系方式</button>
+  </form>
+</div>
+<div class="card">
+  <h3 style="margin-bottom:16px">新建案例</h3>
+  <form method="post" action="/app/settings/cases/new" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;align-items:end">
+    <div class="form-group" style="margin:0"><label>Slug (URL)</label><input name="slug" required placeholder="my-project-2026"></div>
+    <div class="form-group" style="margin:0"><label>标题</label><input name="title" required></div>
+    <div class="form-group" style="margin:0"><label>副标题</label><input name="subtitle"></div>
+    <div class="form-group" style="margin:0"><label>排序</label><input type="number" name="sort_order" value="0"></div>
+    <div class="form-group" style="margin:0"><label><input type="checkbox" name="is_online"> 立即上线</label></div>
+    <div class="form-group" style="margin:0;grid-column:1/-1"><label>描述</label><textarea name="description"></textarea></div>
+    <button type="submit" class="btn">创建案例</button>
+  </form>
+</div>
+<div class="card">
+  <table>
+    <thead><tr><th>标题</th><th>Slug</th><th>状态</th><th></th></tr></thead>
+    <tbody>
+      {% for c in cases %}
+      <tr>
+        <td>{{ c.title }}</td><td><a href="/cases/{{ c.slug }}" target="_blank">{{ c.slug }}</a></td>
+        <td>{% if c.is_online %}<span class="badge">已上线</span>{% else %}草稿{% endif %}</td>
+        <td>
+          <form method="post" action="/app/settings/cases/{{ c.id }}/toggle" style="display:inline">
+            <button type="submit" class="btn btn-outline" style="padding:4px 12px;font-size:.75rem">{% if c.is_online %}下线{% else %}上线{% endif %}</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% if pages %}
+<div class="card">
+  <h3 style="margin-bottom:16px">关于页内容</h3>
+  <form method="post" action="/app/settings/about">
+    <div class="form-group"><label>Markdown 正文</label><textarea name="body_md" rows="12" style="font-family:monospace">{{ pages[0].body_md if pages else '' }}</textarea></div>
+    <button type="submit" class="btn">保存关于页</button>
+  </form>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

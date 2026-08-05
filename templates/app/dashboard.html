@@ -1,0 +1,71 @@
+{% extends "app/base.html" %}
+{% block title %}Dashboard — Studio OS{% endblock %}
+{% block content %}
+<div class="app-header">
+  <h1>Dashboard</h1>
+  <span style="color:var(--muted);font-size:.875rem">你好，{{ user.display_name or user.email }}</span>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="value">{{ stats.active }}</div>
+    <div class="label">进行中项目</div>
+  </div>
+  <div class="stat-card">
+    <div class="value">{{ stats.due_week }}</div>
+    <div class="label">本周到期</div>
+  </div>
+  {% if user.role == 'admin' %}
+  <div class="stat-card">
+    <div class="value">¥{{ '{:,.0f}'.format(stats.pending_payment) }}</div>
+    <div class="label">待回款</div>
+  </div>
+  {% endif %}
+  <div class="stat-card">
+    <div class="value">{{ stats.leads }}</div>
+    <div class="label">待跟进线索</div>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-bottom:16px">项目进度</h3>
+  {% if projects %}
+  <table>
+    <thead>
+      <tr><th>编号</th><th>项目</th><th>客户</th><th>阶段</th><th>截止日期</th></tr>
+    </thead>
+    <tbody>
+      {% for p in projects[:8] %}
+      <tr>
+        <td><a href="/app/projects/{{ p.id }}">{{ p.code }}</a></td>
+        <td>{{ p.name }}</td>
+        <td>{{ p.client_name or '—' }}</td>
+        <td><span class="badge">{{ status_labels.get(p.status, p.status) }}</span></td>
+        <td>{{ p.deadline or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color:var(--muted)">暂无项目，<a href="/app/projects">新建项目</a></p>
+  {% endif %}
+</div>
+
+{% if milestones %}
+<div class="card">
+  <h3 style="margin-bottom:16px">本周待办</h3>
+  <table>
+    <thead><tr><th>里程碑</th><th>项目</th><th>截止</th></tr></thead>
+    <tbody>
+      {% for m in milestones %}
+      <tr>
+        <td>{{ m.name }}</td>
+        <td><a href="/app/projects/{{ m.project_id }}">{{ m.project_name }}</a></td>
+        <td>{{ m.due_date }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

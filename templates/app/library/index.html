@@ -1,0 +1,89 @@
+{% extends "app/base.html" %}
+{% block title %}资料库 — Studio OS{% endblock %}
+{% block content %}
+<div class="app-header"><h1>资料库</h1></div>
+
+<div class="tabs">
+  <a class="tab {% if not request.query_params.get('tab') or request.query_params.get('tab') == 'materials' %}active{% endif %}" href="?tab=materials">材料价格表</a>
+  <a class="tab {% if request.query_params.get('tab') == 'labor' %}active{% endif %}" href="?tab=labor">人工费表</a>
+  <a class="tab {% if request.query_params.get('tab') == 'templates' %}active{% endif %}" href="?tab=templates">BOQ 模板</a>
+</div>
+
+{% set current_tab = request.query_params.get('tab', 'materials') %}
+
+{% if current_tab == 'materials' %}
+<div class="card">
+  {% if user.role == 'admin' %}
+  <form method="post" action="/app/library/materials/new" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:20px;align-items:end">
+    <div class="form-group" style="margin:0"><label>名称</label><input name="name" required></div>
+    <div class="form-group" style="margin:0"><label>品牌</label><input name="brand"></div>
+    <div class="form-group" style="margin:0"><label>规格</label><input name="spec"></div>
+    <div class="form-group" style="margin:0"><label>单位</label><input name="unit" value="㎡"></div>
+    <div class="form-group" style="margin:0"><label>参考价</label><input type="number" name="ref_price" step="0.01"></div>
+    <div class="form-group" style="margin:0"><label>分类</label>
+      <select name="category"><option>涂料</option><option>木材</option><option>金属</option><option>亚克力</option><option>灯具</option><option>其他</option></select>
+    </div>
+    <button type="submit" class="btn">添加</button>
+  </form>
+  {% endif %}
+  <table>
+    <thead><tr><th>名称</th><th>品牌</th><th>规格</th><th>单位</th><th>参考价</th><th>分类</th>{% if user.role == 'admin' %}<th></th>{% endif %}</tr></thead>
+    <tbody>
+      {% for m in materials %}
+      <tr>
+        <td>{{ m.name }}</td><td>{{ m.brand or '—' }}</td><td>{{ m.spec or '—' }}</td>
+        <td>{{ m.unit }}</td><td>¥{{ '{:,.2f}'.format(m.ref_price or 0) }}</td><td>{{ m.category }}</td>
+        {% if user.role == 'admin' %}
+        <td><form method="post" action="/app/library/materials/{{ m.id }}/delete" style="display:inline"><button type="submit" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:.8rem">删除</button></form></td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% elif current_tab == 'labor' %}
+<div class="card">
+  {% if user.role == 'admin' %}
+  <form method="post" action="/app/library/labor/new" style="display:flex;gap:10px;margin-bottom:20px;align-items:end;flex-wrap:wrap">
+    <div class="form-group" style="margin:0"><label>工种</label><input name="name" required></div>
+    <div class="form-group" style="margin:0"><label>单位</label><input name="unit" value="工日"></div>
+    <div class="form-group" style="margin:0"><label>日薪</label><input type="number" name="day_rate" step="0.01"></div>
+    <div class="form-group" style="margin:0"><label>技能</label>
+      <select name="skill_level"><option>初级</option><option>中级</option><option>高级</option><option>专项</option></select>
+    </div>
+    <button type="submit" class="btn">添加</button>
+  </form>
+  {% endif %}
+  <table>
+    <thead><tr><th>工种</th><th>单位</th><th>日薪</th><th>技能</th>{% if user.role == 'admin' %}<th></th>{% endif %}</tr></thead>
+    <tbody>
+      {% for l in labor %}
+      <tr>
+        <td>{{ l.name }}</td><td>{{ l.unit }}</td><td>¥{{ '{:,.2f}'.format(l.day_rate or 0) }}</td><td>{{ l.skill_level }}</td>
+        {% if user.role == 'admin' %}
+        <td><form method="post" action="/app/library/labor/{{ l.id }}/delete" style="display:inline"><button type="submit" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:.8rem">删除</button></form></td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% else %}
+<div class="card">
+  <table>
+    <thead><tr><th>模板名称</th><th>项目类型</th><th>操作</th></tr></thead>
+    <tbody>
+      {% for t in boq_templates %}
+      <tr>
+        <td>{{ t.name }}</td>
+        <td>{{ t.project_type }}</td>
+        <td><a href="/app/projects?tab=quote">在项目中使用 →</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

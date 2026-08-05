@@ -1,0 +1,63 @@
+{% extends "app/base.html" %}
+{% block title %}项目 — Studio OS{% endblock %}
+{% block content %}
+<div class="app-header">
+  <h1>项目列表</h1>
+</div>
+
+<div class="card">
+  <h3 style="margin-bottom:16px">新建项目</h3>
+  <form method="post" action="/app/projects/new" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;align-items:end">
+    <div class="form-group" style="margin:0">
+      <label>项目名称</label>
+      <input type="text" name="name" required placeholder="例：某某咖啡店设计">
+    </div>
+    <div class="form-group" style="margin:0">
+      <label>客户</label>
+      <select name="client_id">
+        <option value="0">— 无 —</option>
+        {% for c in clients %}
+        <option value="{{ c.id }}">{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group" style="margin:0">
+      <label>行业</label>
+      <select name="industry">
+        <option value="餐饮">餐饮</option>
+        <option value="零售">零售</option>
+        <option value="美陈">美陈</option>
+        <option value="快闪">快闪</option>
+        <option value="其他">其他</option>
+      </select>
+    </div>
+    <div class="form-group" style="margin:0">
+      <label>面积 (㎡)</label>
+      <input type="number" name="area" step="0.1" value="0">
+    </div>
+    <button type="submit" class="btn">创建</button>
+  </form>
+</div>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr><th>编号</th><th>名称</th><th>客户</th><th>行业</th><th>阶段</th><th>截止</th></tr>
+    </thead>
+    <tbody>
+      {% for p in projects %}
+      <tr>
+        <td><a href="/app/projects/{{ p.id }}">{{ p.code }}</a></td>
+        <td>{{ p.name }}</td>
+        <td>{{ p.client_name or '—' }}</td>
+        <td>{{ p.industry or '—' }}</td>
+        <td><span class="badge">{{ status_labels.get(p.status, p.status) }}</span></td>
+        <td>{{ p.deadline or '—' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" style="color:var(--muted)">暂无项目</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

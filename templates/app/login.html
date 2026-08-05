@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登录 — Studio OS</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-box">
+      <h1>Studio OS 管理后台</h1>
+      {% if error %}<p class="error">{{ error }}</p>{% endif %}
+      <form method="post" action="/app/login">
+        <div class="form-group">
+          <label>邮箱</label>
+          <input type="email" name="email" required placeholder="admin@studio.local">
+        </div>
+        <div class="form-group">
+          <label>密码</label>
+          <input type="password" name="password" required>
+        </div>
+        <button type="submit" class="btn" style="width:100%">登录</button>
+      </form>
+      <p style="text-align:center;margin-top:20px;font-size:.8rem;color:var(--muted)">
+        <a href="/">← 返回公开站</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,86 @@
+{% extends "public/base.html" %}
+{% block title %}{{ studio.name or 'Studio OS' }} — 空间设计工作室{% endblock %}
+{% block content %}
+<!-- ===== Hero 大图区 ===== -->
+<section class="hero">
+  <div class="hero-image" style="background: linear-gradient(135deg, #3b332a 0%, #6b5d4f 50%, #2e2823 100%);">
+    <div class="hero-overlay">
+      <h1 class="hero-title">SPACE DESIGN</h1>
+      <p class="hero-sub">专注工装空间 · 岛式美陈 · 品牌零售与餐饮空间设计</p>
+      <a href="/cases" class="btn hero-btn">查看案例</a>
+    </div>
+  </div>
+  <div class="hero-dots">
+    <span class="dot active"></span>
+    <span class="dot"></span>
+    <span class="dot"></span>
+  </div>
+</section>
+
+<!-- ===== 案例展示 ===== -->
+<section class="cases-section" id="cases">
+  <div class="container">
+    <h2 class="section-title">案例展示 <span>Project</span></h2>
+    <div class="cases-grid">
+      <a href="/cases/1" class="case-card">
+        <div class="case-img"><img src="/static/images/cases/case-01.jpg" alt="YUJIA COFFEE"></div>
+        <div class="case-info">
+          <h3>YUJIA COFFEE</h3>
+          <p>面积: 120m² · 年份: 2024</p>
+          <span class="case-more">...more</span>
+        </div>
+      </a>
+      <a href="/cases/2" class="case-card">
+        <div class="case-img"><img src="/static/images/cases/case-02.jpg" alt="项目二"></div>
+        <div class="case-info">
+          <h3>项目二</h3>
+          <p>面积: 80m² · 年份: 2024</p>
+          <span class="case-more">...more</span>
+        </div>
+      </a>
+      <a href="/cases/3" class="case-card">
+        <div class="case-img"><img src="/static/images/cases/case-03.jpg" alt="项目三"></div>
+        <div class="case-info">
+          <h3>项目三</h3>
+          <p>面积: 200m² · 年份: 2023</p>
+          <span class="case-more">...more</span>
+        </div>
+      </a>
+      <a href="/cases/4" class="case-card">
+        <div class="case-img"><img src="/static/images/cases/case-04.jpg" alt="项目四"></div>
+        <div class="case-info">
+          <h3>项目四</h3>
+          <p>面积: 60m² · 年份: 2023</p>
+          <span class="case-more">...more</span>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 业务板块 ===== -->
+<section class="biz-section">
+  <div class="container biz-grid">
+    <div class="biz-image"><img src="/static/images/biz/biz-01.jpg" alt="创意视觉"></div>
+    <div class="biz-text">
+      <h2>创意视觉 <span>Creative Design</span></h2>
+      <p>从品牌策略到空间落地，我们提供一体化的视觉解决方案，让每一个商业空间都成为品牌的最佳表达。</p>
+      <a href="#" class="btn">了解更多</a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 合作伙伴 ===== -->
+<section class="clients-section">
+  <div class="container">
+    <h2 class="section-title">合作伙伴 <span>Our Clients</span></h2>
+    <div class="clients-row">
+      <div class="client-logo">LOGO</div>
+      <div class="client-logo">LOGO</div>
+      <div class="client-logo">LOGO</div>
+      <div class="client-logo">LOGO</div>
+      <div class="client-logo">LOGO</div>
+    </div>
+  </div>
+</section>
+{% endblock %}

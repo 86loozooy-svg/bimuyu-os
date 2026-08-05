@@ -1,0 +1,20 @@
+{% extends "app/base.html" %}
+{% block title %}线索看板 — Studio OS{% endblock %}
+{% block content %}
+<div class="app-header">
+  <h1>线索看板</h1>
+</div>
+<div class="pipeline-board">
+  {% for status, items in board.items() %}
+  <div class="pipeline-col">
+    <h4>{{ status_labels.get(status, status) }} ({{ items|length }})</h4>
+    {% for p in items %}
+    <div class="pipeline-item">
+      <a href="/app/projects/{{ p.id }}"><strong>{{ p.name }}</strong></a>
+      <div style="color:var(--muted);font-size:.75rem;margin-top:4px">{{ p.code }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

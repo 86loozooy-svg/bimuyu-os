@@ -1,0 +1,456 @@
+"""Initialize database schema and seed data."""
+
+import json
+from datetime import date, datetime, timedelta
+
+from passlib.context import CryptContext
+
+from app.config import (
+    BASE_DIR,
+    CONTACT_PATH,
+    DATA_DIR,
+    DEFAULT_ADMIN_EMAIL,
+    DEFAULT_ADMIN_PASSWORD,
+)
+from app.database import db_session, get_connection
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS studio_profile (
+  id INTEGER PRIMARY KEY,
+  name TEXT,
+  logo_path TEXT,
+  description TEXT,
+  address TEXT,
+  tax_id TEXT,
+  bank_account TEXT,
+  email_signature TEXT,
+  default_design_fee_pct REAL DEFAULT 15,
+  default_management_fee_pct REAL DEFAULT 8,
+  default_tax_pct REAL DEFAULT 6,
+  default_margin_pct REAL DEFAULT 25,
+  revision_policy TEXT
+);
+
+CREATE TABLE IF NOT EXISTS collaborators (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  display_name TEXT,
+  role TEXT DEFAULT 'viewer',
+  project_ids TEXT DEFAULT '[]',
+  invited_by TEXT,
+  invited_at DATETIME,
+  expires_at DATETIME,
+  last_access_at DATETIME,
+  revoked BOOLEAN DEFAULT FALSE,
+  token TEXT
+);
+
+CREATE TABLE IF NOT EXISTS audit_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  actor_id INTEGER,
+  action TEXT,
+  target_type TEXT,
+  target_id INTEGER,
+  detail TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS clients (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  contact_person TEXT,
+  phone TEXT,
+  email TEXT,
+  industry TEXT,
+  notes TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS projects (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  code TEXT UNIQUE,
+  name TEXT NOT NULL,
+  client_id INTEGER,
+  industry TEXT,
+  area REAL,
+  status TEXT DEFAULT 'lead',
+  start_date DATE,
+  deadline DATE,
+  budget_min REAL,
+  budget_max REAL,
+  brief_md TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (client_id) REFERENCES clients(id)
+);
+
+CREATE TABLE IF NOT EXISTS project_milestones (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id INTEGER,
+  name TEXT,
+  due_date DATE,
+  done BOOLEAN DEFAULT FALSE,
+  done_at DATETIME,
+  FOREIGN KEY (project_id) REFERENCES projects(id)
+);
+
+CREATE TABLE IF NOT EXISTS feedback_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id INTEGER,
+  raw_input TEXT,
+  category TEXT,
+  actionable TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (project_id) REFERENCES projects(id)
+);
+
+CREATE TABLE IF NOT EXISTS materials (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  brand TEXT,
+  spec TEXT,
+  unit TEXT,
+  ref_price REAL,
+  supplier TEXT,
+  category TEXT,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS labor_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  unit TEXT,
+  day_rate REAL,
+  skill_level TEXT
+);
+
+CREATE TABLE IF NOT EXISTS boq_templates (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  project_type TEXT,
+  json_structure TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS quotes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id INTEGER,
+  version INTEGER DEFAULT 1,
+  template_id INTEGER,
+  json_detail TEXT NOT NULL,
+  direct_cost REAL,
+  design_fee_pct REAL,
+  management_fee_pct REAL,
+  tax_pct REAL,
+  margin_pct REAL,
+  total REAL,
+  status TEXT DEFAULT 'draft',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (project_id) REFERENCES projects(id),
+  FOREIGN KEY (template_id) REFERENCES boq_templates(id)
+);
+
+CREATE TABLE IF NOT EXISTS invoices (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id INTEGER,
+  type TEXT,
+  amount REAL,
+  due_date DATE,
+  paid BOOLEAN DEFAULT FALSE,
+  paid_at DATETIME,
+  invoice_number TEXT,
+  FOREIGN KEY (project_id) REFERENCES projects(id)
+);
+
+CREATE TABLE IF NOT EXISTS ledger (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id INTEGER,
+  type TEXT,
+  category TEXT,
+  amount REAL,
+  note TEXT,
+  occurred_at DATE,
+  FOREIGN KEY (project_id) REFERENCES projects(id)
+);
+
+CREATE TABLE IF NOT EXISTS cases (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  slug TEXT UNIQUE NOT NULL,
+  title TEXT NOT NULL,
+  subtitle TEXT,
+  description TEXT,
+  cover_image TEXT,
+  sort_order INTEGER DEFAULT 0,
+  is_online BOOLEAN DEFAULT FALSE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS case_images (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  case_id INTEGER,
+  image_path TEXT,
+  caption TEXT,
+  sort_order INTEGER DEFAULT 0,
+  FOREIGN KEY (case_id) REFERENCES cases(id)
+);
+
+CREATE TABLE IF NOT EXISTS pages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  slug TEXT UNIQUE,
+  title TEXT,
+  body_md TEXT
+);
+"""
+
+
+def init_schema() -> None:
+    conn = get_connection()
+    conn.executescript(SCHEMA)
+    conn.commit()
+    conn.close()
+
+
+def seed_data() -> None:
+    with db_session() as conn:
+        if conn.execute("SELECT COUNT(*) FROM studio_profile").fetchone()[0] == 0:
+            conn.execute(
+                """
+                INSERT INTO studio_profile (id, name, description, revision_policy)
+                VALUES (1, 'Studio OS 设计工作室',
+                        '专注工装空间、岛式美陈、品牌零售与餐饮空间设计。',
+                        '包含 2 轮修改，超出按轮收费')
+                """
+            )
+
+        if conn.execute("SELECT COUNT(*) FROM collaborators").fetchone()[0] == 0:
+            conn.execute(
+                """
+                INSERT INTO collaborators (email, password_hash, display_name, role, project_ids)
+                VALUES (?, ?, ?, 'admin', NULL)
+                """,
+                (
+                    DEFAULT_ADMIN_EMAIL,
+                    pwd_context.hash(DEFAULT_ADMIN_PASSWORD),
+                    "主理人",
+                ),
+            )
+
+        if conn.execute("SELECT COUNT(*) FROM clients").fetchone()[0] == 0:
+            conn.execute(
+                """
+                INSERT INTO clients (name, contact_person, phone, industry, notes)
+                VALUES ('示例餐饮品牌', '张经理', '13900001111', '餐饮', '新店筹备中')
+                """
+            )
+
+        if conn.execute("SELECT COUNT(*) FROM projects").fetchone()[0] == 0:
+            conn.execute(
+                """
+                INSERT INTO projects (code, name, client_id, industry, area, status,
+                                      start_date, deadline, budget_min, budget_max, brief_md)
+                VALUES ('p-2026-001', '示例咖啡店空间设计', 1, '餐饮', 120,
+                        'designing', ?, ?, 150000, 200000, ?)
+                """,
+                (
+                    date.today().isoformat(),
+                    (date.today() + timedelta(days=45)).isoformat(),
+                    "## 项目背景\n\n客户希望打造一家具有岛屿度假感的精品咖啡店，强调自然材质与开放动线。\n\n## 核心需求\n\n- 座位区约 40 位\n- 吧台 + 外摆区\n- 品牌色：暖木 + 米白",
+                ),
+            )
+            conn.execute(
+                """
+                INSERT INTO project_milestones (project_id, name, due_date, done)
+                VALUES (1, '方案初稿', ?, 1),
+                       (1, '施工图', ?, 0),
+                       (1, '现场交底', ?, 0)
+                """,
+                (
+                    (date.today() - timedelta(days=7)).isoformat(),
+                    (date.today() + timedelta(days=14)).isoformat(),
+                    (date.today() + timedelta(days=30)).isoformat(),
+                ),
+            )
+
+        if conn.execute("SELECT COUNT(*) FROM materials").fetchone()[0] == 0:
+            materials = [
+                ("乳胶漆", "立邦", "室内墙漆", "㎡", 45, "本地建材", "涂料"),
+                ("橡木饰面板", "天然木", "18mm", "㎡", 380, "木作供应商", "木材"),
+                ("不锈钢踢脚线", "通用", "80mm", "m", 35, "五金市场", "金属"),
+                ("亚克力灯箱", "定制", "3mm", "㎡", 520, "广告制作", "亚克力"),
+                ("轨道射灯", "欧普", "7W 3000K", "套", 85, "灯具城", "灯具"),
+            ]
+            conn.executemany(
+                """
+                INSERT INTO materials (name, brand, spec, unit, ref_price, supplier, category)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                materials,
+            )
+
+        if conn.execute("SELECT COUNT(*) FROM labor_items").fetchone()[0] == 0:
+            labor = [
+                ("木工", "工日", 450, "中级"),
+                ("油漆工", "工日", 380, "中级"),
+                ("电工", "工日", 420, "高级"),
+                ("安装工", "工日", 350, "初级"),
+            ]
+            conn.executemany(
+                """
+                INSERT INTO labor_items (name, unit, day_rate, skill_level)
+                VALUES (?, ?, ?, ?)
+                """,
+                labor,
+            )
+
+        if conn.execute("SELECT COUNT(*) FROM boq_templates").fetchone()[0] == 0:
+            retail_boq = {
+                "groups": [
+                    {
+                        "name": "基础工程",
+                        "items": [
+                            {"name": "墙面乳胶漆", "unit": "㎡", "unit_price": 45},
+                            {"name": "地面自流平", "unit": "㎡", "unit_price": 65},
+                        ],
+                    },
+                    {
+                        "name": "木作工程",
+                        "items": [
+                            {"name": "橡木饰面板", "unit": "㎡", "unit_price": 380},
+                            {"name": "定制柜台", "unit": "m", "unit_price": 1200},
+                        ],
+                    },
+                ]
+            }
+            cafe_boq = {
+                "groups": [
+                    {
+                        "name": "空间基础",
+                        "items": [
+                            {"name": "墙面处理", "unit": "㎡", "unit_price": 55},
+                            {"name": "地面铺装", "unit": "㎡", "unit_price": 180},
+                        ],
+                    },
+                    {
+                        "name": "吧台区",
+                        "items": [
+                            {"name": "吧台木作", "unit": "m", "unit_price": 1500},
+                            {"name": "不锈钢设备台", "unit": "m", "unit_price": 800},
+                        ],
+                    },
+                ]
+            }
+            conn.execute(
+                """
+                INSERT INTO boq_templates (name, project_type, json_structure)
+                VALUES ('工装-零售', '零售', ?),
+                       ('工装-餐饮', '餐饮', ?),
+                       ('岛式美陈', '美陈', ?)
+                """,
+                (
+                    json.dumps(retail_boq, ensure_ascii=False),
+                    json.dumps(cafe_boq, ensure_ascii=False),
+                    json.dumps(retail_boq, ensure_ascii=False),
+                ),
+            )
+
+        if conn.execute("SELECT COUNT(*) FROM cases").fetchone()[0] == 0:
+            conn.execute(
+                """
+                INSERT INTO cases (slug, title, subtitle, description, cover_image,
+                                   sort_order, is_online)
+                VALUES ('island-cafe-2025', '岛屿咖啡 · 城市中的度假感',
+                        '120㎡ 餐饮空间 · 暖木与自然光',
+                        '本项目以「岛屿度假」为概念，通过大面积暖木饰面、弧形吧台与柔和灯光，营造轻松惬意的消费体验。开放动线连接室内与外摆，适合快节奏都市中的慢享时刻。',
+                        '/static/img/placeholder-case-1.svg', 1, 1),
+                       ('retail-flagship-2024', '品牌旗舰 · 极简零售',
+                        '200㎡ 零售空间 · 黑白灰基调',
+                        '为新兴生活方式品牌打造的旗舰门店，强调产品陈列的仪式感与空间的流动感。材质以微水泥与金属为主，配合重点照明突出 SKU。',
+                        '/static/img/placeholder-case-2.svg', 2, 1),
+                       ('popup-island-2024', '岛式美陈 · 快闪装置',
+                        '商场中庭 · 15 天快闪',
+                        '以岛屿元素为核心的美陈装置，可快速搭建与拆卸。结合品牌色与互动拍照点，活动期间日均引流显著提升。',
+                        '/static/img/placeholder-case-3.svg', 3, 1)
+                """
+            )
+            conn.execute(
+                """
+                INSERT INTO case_images (case_id, image_path, caption, sort_order)
+                VALUES (1, '/static/img/placeholder-case-1.svg', '吧台区全景', 1),
+                       (1, '/static/img/placeholder-case-2.svg', '座位区细节', 2),
+                       (2, '/static/img/placeholder-case-2.svg', '入口立面', 1),
+                       (3, '/static/img/placeholder-case-3.svg', '装置鸟瞰', 1)
+                """
+            )
+
+        if conn.execute("SELECT COUNT(*) FROM pages").fetchone()[0] == 0:
+            conn.execute(
+                """
+                INSERT INTO pages (slug, title, body_md)
+                VALUES ('about', '关于我们', ?)
+                """,
+                (
+                    """## 我们是谁
+
+Studio OS 设计工作室由一位独立设计师主理，专注工装空间、岛式美陈、品牌零售与餐饮空间设计。
+
+## 服务范围
+
+- **空间设计**：从概念到施工图的全流程设计
+- **美陈装置**：商场快闪、品牌活动、节日主题
+- **设计顾问**：品牌升级、门店标准化、设计审核
+
+## 工作方式
+
+直接沟通、快速响应。每个项目配备清晰的时间轴与交付清单，确保从 Brief 到落地的每一步都可追踪。
+""",
+                ),
+            )
+
+        if conn.execute("SELECT COUNT(*) FROM invoices").fetchone()[0] == 0:
+            conn.execute(
+                """
+                INSERT INTO invoices (project_id, type, amount, due_date, paid)
+                VALUES (1, '定金', 50000, ?, 1),
+                       (1, '中期', 80000, ?, 0),
+                       (1, '尾款', 70000, ?, 0)
+                """,
+                (
+                    date.today().isoformat(),
+                    (date.today() + timedelta(days=20)).isoformat(),
+                    (date.today() + timedelta(days=45)).isoformat(),
+                ),
+            )
+
+
+def ensure_data_dirs() -> None:
+    for sub in ("db", "public/cases", "private/projects", "uploads"):
+        (DATA_DIR / sub).mkdir(parents=True, exist_ok=True)
+    if not CONTACT_PATH.exists():
+        CONTACT_PATH.write_text(
+            json.dumps(
+                {
+                    "wechat": "studio_design",
+                    "xiaohongshu_url": "https://www.xiaohongshu.com",
+                    "douyin_url": "https://www.douyin.com",
+                    "phone": "13800000000",
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+
+
+def main() -> None:
+    ensure_data_dirs()
+    init_schema()
+    seed_data()
+    print("✓ 数据库初始化完成")
+    print(f"  路径: {BASE_DIR / 'data' / 'db' / 'studio.db'}")
+    print(f"  Admin: {DEFAULT_ADMIN_EMAIL} / {DEFAULT_ADMIN_PASSWORD}")
+
+
+if __name__ == "__main__":
+    main()

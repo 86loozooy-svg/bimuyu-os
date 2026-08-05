@@ -1,0 +1,23 @@
+{% extends "public/base.html" %}
+{% block title %}案例展示 — {{ studio.name or 'Studio OS' }}{% endblock %}
+{% block content %}
+<section class="cases-page">
+  <div class="container">
+    <h1 class="page-title">案例展示 <span>Projects</span></h1>
+    <div class="cases-grid">
+      {% for case in cases %}
+      <a href="/cases/{{ case.id }}" class="case-card">
+        <div class="case-img">
+          <img src="{{ case.cover }}" alt="{{ case.title }}">
+        </div>
+        <div class="case-info">
+          <h3>{{ case.title }}</h3>
+          <p>{{ case.area }} · {{ case.year }}</p>
+          <span class="case-more">...more</span>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

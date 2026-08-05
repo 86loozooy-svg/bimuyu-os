@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#c8b89d"/>
+      <stop offset="100%" style="stop-color:#7a6e5d"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#g)"/>
+  <text x="400" y="300" text-anchor="middle" fill="#fff" font-family="Georgia, serif" font-size="28">Case Image</text>
+</svg>
