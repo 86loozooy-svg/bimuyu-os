@@ -6,6 +6,7 @@
 <div class="tabs">
   <a class="tab {% if tab == 'profile' %}active{% endif %}" href="?tab=profile">工作室档案</a>
   <a class="tab {% if tab == 'members' %}active{% endif %}" href="?tab=members">成员与权限</a>
+  <a class="tab {% if tab == 'homepage' %}active{% endif %}" href="?tab=homepage">首页内容</a>
   <a class="tab {% if tab == 'public' %}active{% endif %}" href="?tab=public">公开站管理</a>
 </div>
 
@@ -91,6 +92,90 @@
   </table>
 </div>
 {% endif %}
+
+{% elif tab == 'homepage' %}
+<!-- Hero 区 -->
+<div class="card">
+  <h3 style="margin-bottom:16px">Hero 首屏大图</h3>
+  <form method="post" action="/app/settings/homepage">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="form-group"><label>主标题</label><input name="hero_title" value="{{ site.hero_title or '' }}"></div>
+      <div class="form-group"><label>副标题</label><input name="hero_subtitle" value="{{ site.hero_subtitle or '' }}"></div>
+      <div class="form-group"><label>按钮文字</label><input name="hero_btn_text" value="{{ site.hero_btn_text or '' }}"></div>
+      <div class="form-group"><label>按钮链接</label><input name="hero_btn_link" value="{{ site.hero_btn_link or '' }}"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>背景 (CSS gradient 或图片URL)</label><input name="hero_bg" value="{{ site.hero_bg or '' }}" style="font-family:monospace;font-size:.8rem"></div>
+    </div>
+    <h4 style="margin:16px 0 12px">业务板块</h4>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="form-group"><label>业务标题</label><input name="biz_title" value="{{ site.biz_title or '' }}"></div>
+      <div class="form-group"><label>英文副标题</label><input name="biz_subtitle" value="{{ site.biz_subtitle or '' }}"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>业务描述</label><textarea name="biz_text" rows="3">{{ site.biz_text or '' }}</textarea></div>
+      <div class="form-group"><label>按钮文字</label><input name="biz_btn_text" value="{{ site.biz_btn_text or '' }}"></div>
+      <div class="form-group"><label>按钮链接</label><input name="biz_btn_link" value="{{ site.biz_btn_link or '' }}"></div>
+    </div>
+    <h4 style="margin:16px 0 12px">合作伙伴区</h4>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="form-group"><label>板块标题</label><input name="clients_title" value="{{ site.clients_title or '' }}"></div>
+      <div class="form-group"><label>英文副标题</label><input name="clients_subtitle" value="{{ site.clients_subtitle or '' }}"></div>
+    </div>
+    <button type="submit" class="btn" style="margin-top:8px">保存首页内容</button>
+  </form>
+</div>
+
+<!-- 业务配图 -->
+<div class="card">
+  <h3 style="margin-bottom:16px">业务板块配图</h3>
+  {% if site.biz_image %}
+  <div style="margin-bottom:12px">
+    <img src="{{ site.biz_image }}" alt="" style="max-width:300px;border-radius:8px;border:1px solid var(--border)">
+  </div>
+  {% endif %}
+  <form method="post" action="/app/settings/biz-image" enctype="multipart/form-data">
+    <div class="form-group"><label>上传业务配图</label><input type="file" name="image" accept="image/*" required></div>
+    <button type="submit" class="btn">上传</button>
+  </form>
+</div>
+
+<!-- 合作伙伴 LOGO 管理 -->
+<div class="card">
+  <h3 style="margin-bottom:16px">合作伙伴 LOGO</h3>
+  <form method="post" action="/app/settings/client-logos/new" style="margin-bottom:16px">
+    <div style="display:flex;gap:12px;align-items:end">
+      <div class="form-group" style="margin:0;flex:1"><label>添加品牌名称</label><input name="name" required placeholder="品牌名"></div>
+      <button type="submit" class="btn">添加</button>
+    </div>
+  </form>
+  <table>
+    <thead><tr><th>品牌</th><th>LOGO</th><th>状态</th><th>操作</th></tr></thead>
+    <tbody>
+      {% for logo in client_logos %}
+      <tr>
+        <td>{{ logo.name }}</td>
+        <td>
+          {% if logo.logo_path %}
+          <img src="{{ logo.logo_path }}" alt="" style="max-height:30px;max-width:80px;object-fit:contain">
+          {% else %}
+          <span style="color:var(--muted);font-size:.8rem">未上传</span>
+          {% endif %}
+        </td>
+        <td>{% if logo.is_visible %}<span class="badge">显示中</span>{% else %}<span style="font-size:.75rem;color:var(--muted)">隐藏</span>{% endif %}</td>
+        <td style="white-space:nowrap">
+          <form method="post" action="/app/settings/client-logos/{{ logo.id }}/upload" enctype="multipart/form-data" style="display:inline">
+            <input type="file" name="logo" accept="image/*" style="font-size:.7rem;width:120px" required>
+            <button type="submit" style="font-size:.7rem;background:none;border:none;color:var(--accent);cursor:pointer">上传</button>
+          </form>
+          <form method="post" action="/app/settings/client-logos/{{ logo.id }}/toggle" style="display:inline">
+            <button type="submit" style="font-size:.7rem;background:none;border:none;color:var(--accent);cursor:pointer">{% if logo.is_visible %}隐藏{% else %}显示{% endif %}</button>
+          </form>
+          <form method="post" action="/app/settings/client-logos/{{ logo.id }}/delete" style="display:inline" onsubmit="return confirm('删除此品牌LOGO？')">
+            <button type="submit" style="font-size:.7rem;background:none;border:none;color:#c0392b;cursor:pointer">删除</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 
 {% elif tab == 'public' %}
 <div class="card">

@@ -24,6 +24,15 @@ def get_studio_profile() -> dict:
         return row_to_dict(conn.execute("SELECT * FROM studio_profile WHERE id = 1").fetchone()) or {}
 
 
+def load_site_config() -> dict:
+    """Load all key-value pairs from site_config table."""
+    with db_session() as conn:
+        rows = rows_to_list(
+            conn.execute("SELECT key, value FROM site_config").fetchall()
+        )
+    return {r["key"]: r["value"] for r in rows}
+
+
 @router.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     with db_session() as conn:
@@ -35,6 +44,11 @@ async def home(request: Request):
                 """
             ).fetchall()
         )
+        client_logos = rows_to_list(
+            conn.execute(
+                "SELECT * FROM site_client_logos WHERE is_visible = 1 ORDER BY sort_order"
+            ).fetchall()
+        )
     return templates.TemplateResponse(
         "public/index.html",
         {
@@ -42,6 +56,8 @@ async def home(request: Request):
             "studio": get_studio_profile(),
             "cases": cases,
             "contact": load_contact(),
+            "site": load_site_config(),
+            "client_logos": client_logos,
         },
     )
 

@@ -3,11 +3,11 @@
 {% block content %}
 <!-- ===== Hero 大图区 ===== -->
 <section class="hero">
-  <div class="hero-image" style="background: linear-gradient(135deg, #3b332a 0%, #6b5d4f 50%, #2e2823 100%);">
+  <div class="hero-image" style="background: {{ site.hero_bg or 'linear-gradient(135deg, #3b332a 0%, #6b5d4f 50%, #2e2823 100%)' }};">
     <div class="hero-overlay">
-      <h1 class="hero-title">SPACE DESIGN</h1>
-      <p class="hero-sub">专注工装空间 · 岛式美陈 · 品牌零售与餐饮空间设计</p>
-      <a href="/cases" class="btn hero-btn">查看案例</a>
+      <h1 class="hero-title">{{ site.hero_title or 'SPACE DESIGN' }}</h1>
+      <p class="hero-sub">{{ site.hero_subtitle or '' }}</p>
+      <a href="{{ site.hero_btn_link or '/cases' }}" class="btn hero-btn">{{ site.hero_btn_text or '查看案例' }}</a>
     </div>
   </div>
   <div class="hero-dots">
@@ -39,11 +39,11 @@
 <!-- ===== 业务板块 ===== -->
 <section class="biz-section">
   <div class="container biz-grid">
-    <div class="biz-image"><img src="/static/images/biz/biz-01.jpg" alt="创意视觉"></div>
+    <div class="biz-image"><img src="{{ site.biz_image or '/static/images/biz/biz-01.jpg' }}" alt="{{ site.biz_title or '创意视觉' }}"></div>
     <div class="biz-text">
-      <h2>创意视觉 <span>Creative Design</span></h2>
-      <p>从品牌策略到空间落地，我们提供一体化的视觉解决方案，让每一个商业空间都成为品牌的最佳表达。</p>
-      <a href="#" class="btn">了解更多</a>
+      <h2>{{ site.biz_title or '创意视觉' }} <span>{{ site.biz_subtitle or 'Creative Design' }}</span></h2>
+      <p>{{ site.biz_text or '' }}</p>
+      <a href="{{ site.biz_btn_link or '/about' }}" class="btn">{{ site.biz_btn_text or '了解更多' }}</a>
     </div>
   </div>
 </section>
@@ -51,13 +51,17 @@
 <!-- ===== 合作伙伴 ===== -->
 <section class="clients-section">
   <div class="container">
-    <h2 class="section-title">合作伙伴 <span>Our Clients</span></h2>
+    <h2 class="section-title">{{ site.clients_title or '合作伙伴' }} <span>{{ site.clients_subtitle or 'Our Clients' }}</span></h2>
     <div class="clients-row">
-      <div class="client-logo">LOGO</div>
-      <div class="client-logo">LOGO</div>
-      <div class="client-logo">LOGO</div>
-      <div class="client-logo">LOGO</div>
-      <div class="client-logo">LOGO</div>
+      {% for logo in client_logos %}
+      <div class="client-logo">
+        {% if logo.logo_path %}
+        <img src="{{ logo.logo_path }}" alt="{{ logo.name }}" style="max-height:60px;max-width:120px;object-fit:contain">
+        {% else %}
+        {{ logo.name }}
+        {% endif %}
+      </div>
+      {% endfor %}
     </div>
   </div>
 </section>

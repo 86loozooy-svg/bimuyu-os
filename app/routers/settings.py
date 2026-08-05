@@ -60,6 +60,14 @@ async def settings_index(request: Request, user: dict = Depends(require_admin), 
             ).fetchall()
         )
         projects = rows_to_list(conn.execute("SELECT id, code, name FROM projects").fetchall())
+        site_config_rows = rows_to_list(
+            conn.execute("SELECT key, value FROM site_config").fetchall()
+        )
+        client_logos = rows_to_list(
+            conn.execute("SELECT * FROM site_client_logos ORDER BY sort_order").fetchall()
+        )
+
+    site_config = {r["key"]: r["value"] for r in site_config_rows}
 
     return templates.TemplateResponse(
         "app/settings/index.html",
@@ -74,6 +82,8 @@ async def settings_index(request: Request, user: dict = Depends(require_admin), 
             "contact": load_contact(),
             "audit": audit,
             "projects": projects,
+            "site": site_config,
+            "client_logos": client_logos,
         },
     )
 
@@ -368,3 +378,102 @@ async def save_about(user: dict = Depends(require_admin), body_md: str = Form(""
         )
     log_audit(user["id"], "update", "page", 1, "about")
     return RedirectResponse(url="/app/settings?tab=public", status_code=303)
+
+
+@router.post("/homepage")
+async def save_homepage(
+    user: dict = Depends(require_admin),
+    hero_title: str = Form(""),
+    hero_subtitle: str = Form(""),
+    hero_btn_text: str = Form(""),
+    hero_btn_link: str = Form(""),
+    hero_bg: str = Form(""),
+    biz_title: str = Form(""),
+    biz_subtitle: str = Form(""),
+    biz_text: str = Form(""),
+    biz_btn_text: str = Form(""),
+    biz_btn_link: str = Form(""),
+    clients_title: str = Form(""),
+    clients_subtitle: str = Form(""),
+):
+    updates = {
+        "hero_title": hero_title,
+        "hero_subtitle": hero_subtitle,
+        "hero_btn_text": hero_btn_text,
+        "hero_btn_link": hero_btn_link,
+        "hero_bg": hero_bg,
+        "biz_title": biz_title,
+        "biz_subtitle": biz_subtitle,
+        "biz_text": biz_text,
+        "biz_btn_text": biz_btn_text,
+        "biz_btn_link": biz_btn_link,
+        "clients_title": clients_title,
+        "clients_subtitle": clients_subtitle,
+    }
+    with db_session() as conn:
+        for key, value in updates.items():
+            conn.execute(
+                "UPDATE site_config SET value=?, updated_at=CURRENT_TIMESTAMP WHERE key=?",
+                (value, key),
+            )
+    log_audit(user["id"], "update", "site_config", 0, "homepage")
+    return RedirectResponse(url="/app/settings?tab=homepage", status_code=303)
+
+
+@router.post("/biz-image")
+async def upload_biz_image(
+    user: dict = Depends(require_admin),
+    image: UploadFile = File(...),
+):
+    image_path = save_upload_file(image)
+    with db_session() as conn:
+        conn.execute("UPDATE site_config SET value=? WHERE key='biz_image'", (image_path,))
+    log_audit(user["id"], "update", "site_config", 0, f"biz_image: {image_path}")
+    return RedirectResponse(url="/app/settings?tab=homepage", status_code=303)
+
+
+@router.post("/client-logos/new")
+async def add_client_logo(
+    user: dict = Depends(require_admin),
+    name: str = Form(...),
+):
+    with db_session() as conn:
+        max_order = conn.execute(
+            "SELECT COALESCE(MAX(sort_order), 0) FROM site_client_logos"
+        ).fetchone()[0]
+        conn.execute(
+            "INSERT INTO site_client_logos (name, sort_order) VALUES (?, ?)",
+            (name, max_order + 1),
+        )
+    return RedirectResponse(url="/app/settings?tab=homepage", status_code=303)
+
+
+@router.post("/client-logos/{logo_id}/upload")
+async def upload_client_logo(
+    logo_id: int,
+    user: dict = Depends(require_admin),
+    logo: UploadFile = File(...),
+):
+    image_path = save_upload_file(logo)
+    with db_session() as conn:
+        conn.execute("UPDATE site_client_logos SET logo_path=? WHERE id=?", (image_path, logo_id))
+    return RedirectResponse(url="/app/settings?tab=homepage", status_code=303)
+
+
+@router.post("/client-logos/{logo_id}/toggle")
+async def toggle_client_logo(logo_id: int, user: dict = Depends(require_admin)):
+    with db_session() as conn:
+        row = conn.execute("SELECT is_visible FROM site_client_logos WHERE id=?", (logo_id,)).fetchone()
+        if row:
+            conn.execute(
+                "UPDATE site_client_logos SET is_visible=? WHERE id=?",
+                (0 if row["is_visible"] else 1, logo_id),
+            )
+    return RedirectResponse(url="/app/settings?tab=homepage", status_code=303)
+
+
+@router.post("/client-logos/{logo_id}/delete")
+async def delete_client_logo(logo_id: int, user: dict = Depends(require_admin)):
+    with db_session() as conn:
+        conn.execute("DELETE FROM site_client_logos WHERE id=?", (logo_id,))
+    return RedirectResponse(url="/app/settings?tab=homepage", status_code=303)
