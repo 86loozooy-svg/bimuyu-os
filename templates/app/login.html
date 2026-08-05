@@ -4,12 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>登录 — Studio OS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/halo.css">
+  <script src="https://unpkg.com/lucide@latest" defer></script>
 </head>
 <body>
   <div class="login-page">
-    <div class="login-box">
-      <h1>Studio OS 管理后台</h1>
+    <div class="login-box" style="width:100%;max-width:420px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <h1 style="margin:0;font-size:1.25rem">Studio OS</h1>
+      </div>
+      <p style="color:var(--color-text-secondary);font-size:.875rem;margin-bottom:24px">登录管理工作台</p>
       {% if error %}<p class="error">{{ error }}</p>{% endif %}
       <form method="post" action="/app/login">
         <div class="form-group">
@@ -20,12 +29,21 @@
           <label>密码</label>
           <input type="password" name="password" required>
         </div>
-        <button type="submit" class="btn" style="width:100%">登录</button>
+        <button type="submit" class="btn btn-primary" style="width:100%">
+          <i data-lucide="log-in" style="width:14px;height:14px"></i>
+          登录
+        </button>
       </form>
-      <p style="text-align:center;margin-top:20px;font-size:.8rem;color:var(--muted)">
-        <a href="/">← 返回公开站</a>
+      <p style="text-align:center;margin-top:20px;font-size:.8rem;color:var(--color-text-muted)">
+        <a href="/" style="color:var(--color-text-secondary)">← 返回公开站</a>
       </p>
     </div>
   </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.lucide && lucide.createIcons) lucide.createIcons();
+    });
+  </script>
 </body>
 </html>

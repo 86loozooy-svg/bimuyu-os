@@ -57,7 +57,7 @@
           <button type="submit" style="font-size:.7rem;color:var(--accent);background:none;border:none;cursor:pointer;margin-top:4px">更新说明</button>
         </form>
         <form method="post" action="/app/settings/cases/{{ case.id }}/images/{{ img.id }}/delete" onsubmit="return confirm('确认删除这张图片？')">
-          <button type="submit" style="font-size:.75rem;color:#c0392b;background:none;border:none;cursor:pointer">删除图片</button>
+          <button type="submit" style="font-size:.75rem;color:var(--color-error);background:none;border:none;cursor:pointer">删除图片</button>
         </form>
       </div>
     </div>

@@ -2,48 +2,53 @@
 {% block title %}线索看板 — Studio OS{% endblock %}
 {% block content %}
 <div class="app-header">
-  <h1>线索看板</h1>
-  <span style="color:var(--muted);font-size:.875rem">拖拽卡片即可更新项目阶段</span>
+  <div>
+    <div class="eyebrow" style="margin-bottom:8px">Pipeline</div>
+    <h1>线索看板</h1>
+    <p style="margin-top:6px">拖拽卡片即可更新项目阶段</p>
+  </div>
+  <div class="page-actions">
+    <a href="/app/projects/new" class="btn btn-primary">
+      <i data-lucide="plus"></i>
+      新建项目
+    </a>
+  </div>
 </div>
+
 <div class="pipeline-board">
   {% for status, items in board.items() %}
   <div class="pipeline-col" data-status="{{ status }}"
        ondragover="onDragOver(event, this)"
        ondragleave="onDragLeave(this)"
        ondrop="onDrop(event, this, '{{ status }}')">
-    <h4>{{ status_labels.get(status, status) }} <span class="pipeline-count">{{ items|length }}</span></h4>
+    <h4>
+      <span style="display:inline-flex;align-items:center;gap:8px">
+        <span class="status-dot {{ status }}"></span>
+        {{ status_labels.get(status, status) }}
+      </span>
+      <span class="pipeline-count">{{ items|length }}</span>
+    </h4>
     {% for p in items %}
     <div class="pipeline-item" draggable="true"
          ondragstart="onDragStart(event, {{ p.id }})"
          ondragend="onDragEnd(this)">
-      <a href="/app/projects/{{ p.id }}"><strong>{{ p.name }}</strong></a>
-      <div style="color:var(--muted);font-size:.75rem;margin-top:4px">{{ p.code }}{% if p.deadline %} · {{ p.deadline }}{% endif %}</div>
+      <a href="/app/projects/{{ p.id }}">{{ p.name }}</a>
+      <div class="pipeline-meta">
+        <i data-lucide="hash" style="width:10px;height:10px"></i>
+        <span>{{ p.code }}</span>
+        {% if p.deadline %}
+        <span style="margin:0 4px;color:var(--color-border-strong)">·</span>
+        <i data-lucide="calendar" style="width:10px;height:10px"></i>
+        <span>{{ p.deadline }}</span>
+        {% endif %}
+      </div>
     </div>
     {% else %}
-    <div class="pipeline-empty" style="color:var(--muted);font-size:.75rem;padding:12px 0;text-align:center">—</div>
+    <div class="pipeline-empty">暂无项目</div>
     {% endfor %}
   </div>
   {% endfor %}
 </div>
-
-<style>
-.pipeline-item { cursor: grab; }
-.pipeline-item:active { cursor: grabbing; }
-.pipeline-item.dragging { opacity: 0.4; }
-.pipeline-col.drag-over {
-  background: rgba(59, 51, 42, 0.08);
-  border: 2px dashed var(--accent, #3b332a);
-}
-.pipeline-count {
-  display: inline-block;
-  background: var(--border, #ddd);
-  color: var(--text, #333);
-  border-radius: 10px;
-  padding: 0 8px;
-  font-size: .75rem;
-  margin-left: 4px;
-}
-</style>
 
 <script>
 function onDragStart(e, projectId) {
@@ -78,7 +83,6 @@ function onDrop(e, col, newStatus) {
     .then(r => r.json())
     .then(data => {
       if (data.ok) {
-        // Move the card DOM to the new column
         const card = document.querySelector('.pipeline-item.dragging')
           || document.querySelector(`[ondragstart="onDragStart(event, ${projectId})"]`);
         if (card) {
@@ -86,21 +90,15 @@ function onDrop(e, col, newStatus) {
           if (emptyMsg) emptyMsg.remove();
           col.appendChild(card);
           card.classList.remove('dragging');
-          // Update count
-          const countEl = col.querySelector('.pipeline-count');
-          if (countEl) countEl.textContent = col.querySelectorAll('.pipeline-item').length;
         }
-        // Re-render counts in all columns
         document.querySelectorAll('.pipeline-col').forEach(c => {
           const cnt = c.querySelectorAll('.pipeline-item').length;
           const ce = c.querySelector('.pipeline-count');
           if (ce) ce.textContent = cnt;
-          // Add empty placeholder if 0 items
           if (cnt === 0 && !c.querySelector('.pipeline-empty')) {
             const div = document.createElement('div');
             div.className = 'pipeline-empty';
-            div.style.cssText = 'color:var(--muted);font-size:.75rem;padding:12px 0;text-align:center';
-            div.textContent = '—';
+            div.textContent = '暂无项目';
             c.querySelector('h4').after(div);
           }
         });
@@ -110,5 +108,7 @@ function onDrop(e, col, newStatus) {
     })
     .catch(() => alert('网络错误，请重试'));
 }
+
+if (window.lucide && lucide.createIcons) lucide.createIcons();
 </script>
 {% endblock %}

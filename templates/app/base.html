@@ -4,30 +4,99 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Studio OS{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/halo.css">
+  <script src="https://unpkg.com/lucide@latest" defer></script>
 </head>
 <body>
   <div class="app-layout">
     <aside class="app-sidebar">
-      <div class="brand">Studio OS</div>
-      <ul class="app-nav">
-        <li><a href="/app/" {% if request.url.path == '/app/' %}class="active"{% endif %}>Dashboard</a></li>
-        <li><a href="/app/pipeline" {% if '/pipeline' in request.url.path %}class="active"{% endif %}>线索看板</a></li>
-        <li><a href="/app/projects" {% if '/projects' in request.url.path %}class="active"{% endif %}>项目</a></li>
-        <li><a href="/app/library" {% if '/library' in request.url.path %}class="active"{% endif %}>资料库</a></li>
-        <li><a href="/app/quotes" {% if '/quotes' in request.url.path %}class="active"{% endif %}>报价中心</a></li>
-        {% if user and user.role == 'admin' %}
-        <li><a href="/app/settings" {% if '/settings' in request.url.path %}class="active"{% endif %}>设置</a></li>
-        {% endif %}
-        <li style="margin-top:24px;border-top:1px solid rgba(255,255,255,.15);padding-top:12px">
-          <a href="/" target="_blank">查看公开站 ↗</a>
-        </li>
-        <li><a href="/app/logout">退出登录</a></li>
-      </ul>
+      <div class="sidebar-brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>Studio OS</span>
+      </div>
+
+      <nav>
+        <ul class="app-nav">
+          <li class="nav-section">工作台</li>
+          <li>
+            <a href="/app/" {% if request.url.path == '/app/' %}class="active"{% endif %}>
+              <i data-lucide="layout-dashboard"></i>
+              Dashboard
+            </a>
+          </li>
+          <li>
+            <a href="/app/pipeline" {% if '/pipeline' in request.url.path %}class="active"{% endif %}>
+              <i data-lucide="kanban-square"></i>
+              线索看板
+            </a>
+          </li>
+          <li>
+            <a href="/app/projects" {% if '/projects' in request.url.path %}class="active"{% endif %}>
+              <i data-lucide="folder-kanban"></i>
+              项目
+            </a>
+          </li>
+          <li>
+            <a href="/app/library" {% if '/library' in request.url.path %}class="active"{% endif %}>
+              <i data-lucide="library"></i>
+              资料库
+            </a>
+          </li>
+          <li>
+            <a href="/app/quotes" {% if '/quotes' in request.url.path %}class="active"{% endif %}>
+              <i data-lucide="file-text"></i>
+              报价中心
+            </a>
+          </li>
+
+          {% if user and user.role == 'admin' %}
+          <li class="nav-section">管理</li>
+          <li>
+            <a href="/app/settings" {% if '/settings' in request.url.path %}class="active"{% endif %}>
+              <i data-lucide="settings-2"></i>
+              设置
+            </a>
+          </li>
+          {% endif %}
+
+          <li class="nav-section">外部</li>
+          <li>
+            <a href="/" target="_blank">
+              <i data-lucide="globe"></i>
+              查看公开站
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <span class="user-avatar" aria-hidden="true"></span>
+          <div class="user-info">
+            <span class="user-name">{{ user.display_name or user.email }}</span>
+            <span class="user-role">{{ user.role or 'member' }}</span>
+          </div>
+        </div>
+        <a href="/app/logout" class="btn btn-tertiary btn-sm" style="width:100%;margin-top:10px">
+          <i data-lucide="log-out"></i>
+          退出登录
+        </a>
+      </div>
     </aside>
+
     <main class="app-main">
       {% block content %}{% endblock %}
     </main>
   </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.lucide && lucide.createIcons) lucide.createIcons();
+    });
+  </script>
 </body>
 </html>

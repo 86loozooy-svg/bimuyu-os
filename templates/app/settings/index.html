@@ -35,7 +35,7 @@
 
 {% elif tab == 'members' %}
 {% if request.query_params.get('invite_token') %}
-<div class="card" style="background:var(--accent-light)">
+<div class="card" style="background:var(--color-success-soft);border-color:rgba(43,224,140,0.22)">
   <p><strong>邀请已创建</strong></p>
   <p style="font-size:.875rem;margin-top:8px">邀请链接：<code>/app/accept-invite?token={{ request.query_params.get('invite_token') }}</code></p>
   <p style="font-size:.875rem">临时密码：<code>{{ request.query_params.get('temp_pass') }}</code>（请告知协作者并让其修改）</p>
@@ -65,7 +65,7 @@
         <td>
           {% if c.role != 'admin' %}
           <form method="post" action="/app/settings/collaborators/{{ c.id }}/revoke" style="display:inline">
-            <button type="submit" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:.8rem">撤销</button>
+            <button type="submit" style="background:none;border:none;color:var(--color-error);cursor:pointer;font-size:.8rem">撤销</button>
           </form>
           {% endif %}
         </td>

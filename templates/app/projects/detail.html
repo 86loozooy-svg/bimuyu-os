@@ -4,9 +4,9 @@
 <div class="app-header">
   <div>
     <h1>{{ project.name }}</h1>
-    <p style="color:var(--muted);font-size:.875rem;margin-top:4px">
+    <p style="color:var(--color-text-secondary);font-size:.875rem;margin-top:4px">
       {{ project.code }} · {{ project.client_name or '无客户' }} ·
-      <span class="badge">{{ status_labels.get(project.status, project.status) }}</span>
+      <span class="badge status-pill-{{ project.status }}">{{ status_labels.get(project.status, project.status) }}</span>
     </p>
   </div>
   <a href="/app/projects" class="btn btn-outline">← 返回列表</a>
@@ -85,10 +85,10 @@
 
 {% if active_quote %}
 <div class="card">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-    <h3>报价 v{{ active_quote.version }} · {{ active_quote.template_name or '' }}</h3>
-    <div style="display:flex;gap:8px;align-items:center">
-      <span style="font-size:.8rem;color:var(--muted)">导出：</span>
+    <div class="card-header" style="padding:0;margin-bottom:16px">
+    <h3 class="card-title">报价 v{{ active_quote.version }} · {{ active_quote.template_name or '' }}</h3>
+    <div class="page-actions">
+      <span style="font-size:.8rem;color:var(--color-text-secondary)">导出：</span>
       <a href="/app/projects/{{ project.id }}/quote/{{ active_quote.id }}/pdf" class="btn btn-outline" style="padding:6px 14px;font-size:.8rem">PDF</a>
       <a href="/app/projects/{{ project.id }}/quote/{{ active_quote.id }}/excel" class="btn btn-outline" style="padding:6px 14px;font-size:.8rem">Excel</a>
       <a href="/app/projects/{{ project.id }}/quote/{{ active_quote.id }}/word" class="btn btn-outline" style="padding:6px 14px;font-size:.8rem">Word</a>
@@ -113,10 +113,10 @@
       </tbody>
     </table>
     {% endfor %}
-    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+    <div class="total-row">
       <p>直接成本：¥{{ '{:,.2f}'.format(active_quote.direct_cost or 0) }}</p>
       <p style="font-size:1.1rem;font-weight:600;margin-top:8px">总计：¥{{ '{:,.2f}'.format(active_quote.total or 0) }}</p>
-      <p style="font-size:.8rem;color:var(--muted)">
+      <p class="fee-note">
         含设计费 {{ active_quote.design_fee_pct }}% · 管理费 {{ active_quote.management_fee_pct }}% ·
         税 {{ active_quote.tax_pct }}% · 利润 {{ active_quote.margin_pct }}%
       </p>

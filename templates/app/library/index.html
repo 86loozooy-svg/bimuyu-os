@@ -73,13 +73,13 @@
         <td class="mat-display">
           <button type="button" class="btn btn-outline" style="padding:4px 10px;font-size:.75rem" onclick="editMaterial({{ m.id }})">编辑</button>
           <form method="post" action="/app/library/materials/{{ m.id }}/delete" style="display:inline" onsubmit="return confirm('确认删除？')">
-            <button type="submit" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:.75rem">删除</button>
+            <button type="submit" style="background:none;border:none;color:var(--color-error);cursor:pointer;font-size:.75rem">删除</button>
           </form>
         </td>
         {% endif %}
       </tr>
       <tr id="mat-edit-{{ m.id }}" style="display:none">
-        <td colspan="8" style="background:var(--bg-alt,#f8f6f3);padding:12px">
+        <td colspan="8" style="background:var(--color-elevated);padding:12px">
           <form method="post" action="/app/library/materials/{{ m.id }}/edit" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;align-items:end">
             <div class="form-group" style="margin:0"><label>名称</label><input name="name" value="{{ m.name }}" style="width:100%"></div>
             <div class="form-group" style="margin:0"><label>品牌</label><input name="brand" value="{{ m.brand or '' }}" style="width:100%"></div>
@@ -138,13 +138,13 @@
         <td class="labor-display">
           <button type="button" class="btn btn-outline" style="padding:4px 10px;font-size:.75rem" onclick="editLabor({{ l.id }})">编辑</button>
           <form method="post" action="/app/library/labor/{{ l.id }}/delete" style="display:inline" onsubmit="return confirm('确认删除？')">
-            <button type="submit" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:.75rem">删除</button>
+            <button type="submit" style="background:none;border:none;color:var(--color-error);cursor:pointer;font-size:.75rem">删除</button>
           </form>
         </td>
         {% endif %}
       </tr>
       <tr id="labor-edit-{{ l.id }}" style="display:none">
-        <td colspan="5" style="background:var(--bg-alt,#f8f6f3);padding:12px">
+        <td colspan="5" style="background:var(--color-elevated);padding:12px">
           <form method="post" action="/app/library/labor/{{ l.id }}/edit" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap">
             <div class="form-group" style="margin:0"><label>工种</label><input name="name" value="{{ l.name }}" style="width:100%"></div>
             <div class="form-group" style="margin:0"><label>单位</label><input name="unit" value="{{ l.unit }}" style="width:60px"></div>

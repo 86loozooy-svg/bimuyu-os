@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Studio OS — Halo Dashboard Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/halo.css">
+  <script src="https://unpkg.com/lucide@latest" defer></script>
+  <style>
+    /* Preview-specific layout tweaks */
+    .preview-main { padding: var(--space-6) var(--space-8); }
+    @media (max-width: 768px) { .preview-main { padding: var(--space-4); } }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="app-sidebar">
+      <div class="sidebar-brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>Studio OS</span>
+      </div>
+      <nav>
+        <ul class="app-nav">
+          <li class="nav-section">工作台</li>
+          <li><a href="#" class="active"><i data-lucide="layout-dashboard"></i>Dashboard</a></li>
+          <li><a href="#"><i data-lucide="kanban-square"></i>线索看板</a></li>
+          <li><a href="#"><i data-lucide="folder-kanban"></i>项目</a></li>
+          <li><a href="#"><i data-lucide="library"></i>资料库</a></li>
+          <li><a href="#"><i data-lucide="file-text"></i>报价中心</a></li>
+          <li class="nav-section">管理</li>
+          <li><a href="#"><i data-lucide="settings-2"></i>设置</a></li>
+        </ul>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <span class="user-avatar" aria-hidden="true"></span>
+          <div class="user-info">
+            <span class="user-name">Admin</span>
+            <span class="user-role">admin</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="app-main preview-main">
+      <div class="app-header">
+        <div>
+          <div class="eyebrow" style="margin-bottom:8px">Overview</div>
+          <h1>工作台</h1>
+          <p style="margin-top:6px">你好，Admin</p>
+        </div>
+        <div class="page-actions">
+          <a href="#" class="btn btn-primary"><i data-lucide="plus"></i>新建项目</a>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <article class="stat-tile" data-tone="info">
+          <div class="stat-head"><span class="stat-eyebrow">进行中项目</span><i data-lucide="folder-kanban"></i></div>
+          <div class="stat-value">12</div>
+          <div class="stat-meta"><span class="chip" data-tone="info">Live</span>
+            <svg class="stat-spark" viewBox="0 0 96 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="0,22 12,18 24,20 36,14 48,16 60,10 72,12 84,7 96,4"/></svg>
+          </div>
+        </article>
+        <article class="stat-tile" data-tone="warning">
+          <div class="stat-head"><span class="stat-eyebrow">本周到期</span><i data-lucide="clock"></i></div>
+          <div class="stat-value">3</div>
+          <div class="stat-meta"><span class="chip" data-tone="warning">Attention</span>
+            <svg class="stat-spark" viewBox="0 0 96 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="0,18 12,20 24,16 36,22 48,18 60,24 72,20 84,26 96,22"/></svg>
+          </div>
+        </article>
+        <article class="stat-tile" data-tone="success">
+          <div class="stat-head"><span class="stat-eyebrow">待回款</span><i data-lucide="banknote"></i></div>
+          <div class="stat-value">¥284,600</div>
+          <div class="stat-meta"><span class="chip" data-tone="success">CNY</span>
+            <svg class="stat-spark" viewBox="0 0 96 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="0,24 12,22 24,18 36,20 48,12 60,14 72,10 84,6 96,8"/></svg>
+          </div>
+        </article>
+        <article class="stat-tile" data-tone="primary">
+          <div class="stat-head"><span class="stat-eyebrow">待跟进线索</span><i data-lucide="target"></i></div>
+          <div class="stat-value">5</div>
+          <div class="stat-meta"><span class="chip">Pipeline</span>
+            <svg class="stat-spark" viewBox="0 0 96 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="0,20 12,22 24,16 36,18 48,12 60,14 72,8 84,12 96,5"/></svg>
+          </div>
+        </article>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:var(--space-2)">
+        <div class="card" style="position:relative">
+          <div class="card-header"><h3 class="card-title">项目状态分布</h3><span class="chip" data-tone="neutral">实时</span></div>
+          <div style="position:relative;height:280px"><canvas id="statusChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3 class="card-title">快捷入口</h3></div>
+          <div class="quick-grid">
+            <a href="#" class="quick-card"><span class="quick-icon" style="color:var(--color-info);background:var(--color-info-soft)"><i data-lucide="folder-kanban"></i></span><span class="quick-title">项目列表</span><span class="quick-desc">查看全部项目档案与进度</span></a>
+            <a href="#" class="quick-card"><span class="quick-icon" style="color:var(--color-primary);background:var(--color-primary-soft)"><i data-lucide="kanban-square"></i></span><span class="quick-title">线索看板</span><span class="quick-desc">拖拽卡片更新项目阶段</span></a>
+            <a href="#" class="quick-card"><span class="quick-icon" style="color:var(--color-warning);background:var(--color-warning-soft)"><i data-lucide="library"></i></span><span class="quick-title">资料库</span><span class="quick-desc">材料、人工与 BOQ 模板</span></a>
+            <a href="#" class="quick-card"><span class="quick-icon" style="color:var(--color-success);background:var(--color-success-soft)"><i data-lucide="settings-2"></i></span><span class="quick-title">系统设置</span><span class="quick-desc">工作室档案与 CMS 管理</span></a>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h3 class="card-title">项目进度</h3><a href="#" class="btn btn-sm btn-outline">查看全部</a></div>
+        <table>
+          <thead><tr><th>编号</th><th>项目</th><th>客户</th><th>阶段</th><th>截止日期</th></tr></thead>
+          <tbody>
+            <tr><td><a href="#">P-2026-008</a></td><td>岛屿咖啡概念店</td><td>Island Coffee</td><td><span class="badge status-pill-designing">设计中</span></td><td class="mono">2026-08-20</td></tr>
+            <tr><td><a href="#">P-2026-007</a></td><td>品牌旗舰展厅</td><td>NOVA Retail</td><td><span class="badge status-pill-signed">已签约</span></td><td class="mono">2026-09-05</td></tr>
+            <tr><td><a href="#">P-2026-006</a></td><td>岛式美陈快闪</td><td>Lunar Pop-up</td><td><span class="badge status-pill-delivering">交付中</span></td><td class="mono">2026-08-12</td></tr>
+            <tr><td><a href="#">P-2026-005</a></td><td>办公空间改造</td><td>Pixel Studio</td><td><span class="badge status-pill-quoting">报价中</span></td><td class="mono">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    Chart.defaults.color = '#9AA0AE';
+    Chart.defaults.borderColor = '#2A2D38';
+    new Chart(document.getElementById('statusChart'), {
+      type: 'doughnut',
+      data: {
+        labels: ['线索', 'Brief', '报价中', '已签约', '设计中', '交付中', '已完成'],
+        datasets: [{
+          data: [2, 1, 2, 2, 3, 1, 1],
+          backgroundColor: ['#5C6170', '#3DD7E5', '#F5D547', '#2BE08C', '#5B6BFF', '#FF3A5C', '#2BE08C'],
+          borderWidth: 2,
+          borderColor: '#14151C',
+          hoverOffset: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '62%',
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: { font: { family: "'Inter', sans-serif", size: 12 }, padding: 16, usePointStyle: true, pointStyle: 'circle' }
+          }
+        }
+      }
+    });
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.lucide && lucide.createIcons) lucide.createIcons();
+    });
+  </script>
+</body>
+</html>
