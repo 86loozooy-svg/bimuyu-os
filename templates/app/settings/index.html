@@ -119,15 +119,21 @@
 </div>
 <div class="card">
   <table>
-    <thead><tr><th>标题</th><th>Slug</th><th>状态</th><th></th></tr></thead>
+    <thead><tr><th>封面</th><th>标题</th><th>Slug</th><th>状态</th><th>操作</th></tr></thead>
     <tbody>
       {% for c in cases %}
       <tr>
-        <td>{{ c.title }}</td><td><a href="/cases/{{ c.slug }}" target="_blank">{{ c.slug }}</a></td>
+        <td><img src="{{ c.cover_image or '' }}" alt="" style="width:60px;height:40px;object-fit:cover;border-radius:6px"></td>
+        <td>{{ c.title }}</td>
+        <td><a href="/cases/{{ c.slug }}" target="_blank">{{ c.slug }}</a></td>
         <td>{% if c.is_online %}<span class="badge">已上线</span>{% else %}草稿{% endif %}</td>
-        <td>
+        <td style="white-space:nowrap">
+          <a href="/app/settings/cases/{{ c.id }}/edit" class="btn btn-outline" style="padding:4px 12px;font-size:.75rem">编辑</a>
           <form method="post" action="/app/settings/cases/{{ c.id }}/toggle" style="display:inline">
             <button type="submit" class="btn btn-outline" style="padding:4px 12px;font-size:.75rem">{% if c.is_online %}下线{% else %}上线{% endif %}</button>
+          </form>
+          <form method="post" action="/app/settings/cases/{{ c.id }}/delete" style="display:inline" onsubmit="return confirm('确认删除案例「{{ c.title }}」？此操作不可恢复！')">
+            <button type="submit" style="background:none;border:1px solid #e74c3c;color:#e74c3c;padding:4px 12px;font-size:.75rem;border-radius:6px;cursor:pointer">删除</button>
           </form>
         </td>
       </tr>

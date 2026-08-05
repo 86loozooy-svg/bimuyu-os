@@ -24,3 +24,7 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Uploads (keep dir, ignore files)
+static/uploads/*
+!static/uploads/.gitkeep

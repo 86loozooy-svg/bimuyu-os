@@ -1,0 +1,90 @@
+{% extends "app/base.html" %}
+{% block title %}编辑案例 — Studio OS{% endblock %}
+{% block content %}
+<div class="app-header">
+  <h1>编辑案例</h1>
+  <a href="/app/settings?tab=public" style="font-size:.85rem;color:var(--muted)">← 返回案例列表</a>
+</div>
+
+{% if case %}
+
+<!-- 基本信息编辑 -->
+<div class="card">
+  <h3 style="margin-bottom:16px">基本信息</h3>
+  <form method="post" action="/app/settings/cases/{{ case.id }}/edit">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="form-group"><label>标题</label><input name="title" value="{{ case.title or '' }}" required></div>
+      <div class="form-group"><label>Slug (URL)</label><input name="slug" value="{{ case.slug or '' }}" required></div>
+      <div class="form-group"><label>副标题</label><input name="subtitle" value="{{ case.subtitle or '' }}"></div>
+      <div class="form-group"><label>排序</label><input type="number" name="sort_order" value="{{ case.sort_order or 0 }}"></div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label><input type="checkbox" name="is_online" {% if case.is_online %}checked{% endif %}> 已上线</label>
+      </div>
+      <div class="form-group" style="grid-column:1/-1"><label>描述</label><textarea name="description" rows="6">{{ case.description or '' }}</textarea></div>
+    </div>
+    <button type="submit" class="btn" style="margin-top:8px">保存基本信息</button>
+  </form>
+</div>
+
+<!-- 封面图上传 -->
+<div class="card">
+  <h3 style="margin-bottom:16px">封面图</h3>
+  {% if case.cover_image %}
+  <div style="margin-bottom:16px">
+    <img src="{{ case.cover_image }}" alt="封面" style="max-width:300px;border-radius:8px;border:1px solid var(--border)">
+  </div>
+  {% else %}
+  <p style="color:var(--muted);margin-bottom:16px">暂无封面图</p>
+  {% endif %}
+  <form method="post" action="/app/settings/cases/{{ case.id }}/cover" enctype="multipart/form-data">
+    <div class="form-group"><label>上传封面图</label><input type="file" name="cover" accept="image/*" required></div>
+    <button type="submit" class="btn">上传封面</button>
+  </form>
+</div>
+
+<!-- 多图管理 -->
+<div class="card">
+  <h3 style="margin-bottom:16px">案例图片 ({{ images|length }})</h3>
+
+  {% if images %}
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-bottom:24px">
+    {% for img in images %}
+    <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden">
+      <img src="{{ img.image_path }}" alt="{{ img.caption or '' }}" style="width:100%;height:160px;object-fit:cover;display:block">
+      <div style="padding:10px">
+        <form method="post" action="/app/settings/cases/{{ case.id }}/images/{{ img.id }}/caption" style="margin-bottom:8px">
+          <input name="caption" value="{{ img.caption or '' }}" placeholder="图片说明" style="width:100%;font-size:.8rem;padding:6px 8px;border:1px solid var(--border);border-radius:6px">
+          <button type="submit" style="font-size:.7rem;color:var(--accent);background:none;border:none;cursor:pointer;margin-top:4px">更新说明</button>
+        </form>
+        <form method="post" action="/app/settings/cases/{{ case.id }}/images/{{ img.id }}/delete" onsubmit="return confirm('确认删除这张图片？')">
+          <button type="submit" style="font-size:.75rem;color:#c0392b;background:none;border:none;cursor:pointer">删除图片</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p style="color:var(--muted);margin-bottom:24px">暂无案例图片，请上传</p>
+  {% endif %}
+
+  <form method="post" action="/app/settings/cases/{{ case.id }}/images" enctype="multipart/form-data">
+    <div class="form-group"><label>上传新图片</label><input type="file" name="image" accept="image/*" required></div>
+    <div class="form-group"><label>图片说明 (可选)</label><input name="caption" placeholder="如：吧台区全景"></div>
+    <button type="submit" class="btn">添加图片</button>
+  </form>
+</div>
+
+<!-- 删除案例 -->
+<div class="card" style="border:1px solid #e74c3c">
+  <h3 style="margin-bottom:8px;color:#c0392b">危险操作</h3>
+  <p style="font-size:.85rem;color:var(--muted);margin-bottom:12px">删除案例将同时删除所有关联图片，不可恢复。</p>
+  <form method="post" action="/app/settings/cases/{{ case.id }}/delete" onsubmit="return confirm('确认删除案例「{{ case.title }}」？此操作不可恢复！')">
+    <button type="submit" style="background:#e74c3c;color:#fff;border:none;padding:8px 20px;border-radius:8px;cursor:pointer;font-size:.85rem">删除此案例</button>
+  </form>
+</div>
+
+{% else %}
+<p style="color:var(--muted)">案例不存在。</p>
+{% endif %}
+
+{% endblock %}
