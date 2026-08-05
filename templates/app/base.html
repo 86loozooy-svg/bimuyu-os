@@ -52,6 +52,18 @@
               报价中心
             </a>
           </li>
+          <li>
+            <a href="/app/catalog" {% if '/catalog' in request.url.path %}class="active"{% endif %}>
+              <i data-lucide="calculator"></i>
+              单价目录
+            </a>
+          </li>
+          <li>
+            <a href="/app/calculator" {% if '/calculator' in request.url.path %}class="active"{% endif %}>
+              <i data-lucide="ruler"></i>
+              工程计算器
+            </a>
+          </li>
 
           {% if user and user.role == 'admin' %}
           <li class="nav-section">管理</li>

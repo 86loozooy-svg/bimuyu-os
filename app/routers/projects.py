@@ -113,6 +113,48 @@ async def project_create(
     return RedirectResponse(url=f"/app/projects/{project_id}?tab=brief", status_code=303)
 
 
+@router.post("/{project_id}/edit")
+async def project_edit(
+    project_id: int,
+    request: Request,
+    user: dict = Depends(get_current_user),
+):
+    """更新项目基本信息."""
+    if not user_can_access_project(user, project_id):
+        raise HTTPException(status_code=403)
+    form = await request.form()
+    fields = {}
+    for key in ("name", "status", "industry", "client_id", "area",
+                "budget_min", "budget_max", "start_date", "deadline"):
+        val = form.get(key)
+        if val is not None and val != "":
+            fields[key] = val
+    # type conversions
+    if "client_id" in fields:
+        fields["client_id"] = int(fields["client_id"]) or None
+    for num_key in ("area", "budget_min", "budget_max"):
+        if num_key in fields:
+            fields[num_key] = float(fields[num_key])
+    fields["updated_at"] = "CURRENT_TIMESTAMP"
+
+    with db_session() as conn:
+        sets = []
+        vals = []
+        for k, v in fields.items():
+            if k == "updated_at":
+                sets.append(f"{k} = CURRENT_TIMESTAMP")
+            else:
+                sets.append(f"{k} = ?")
+                vals.append(v)
+        if sets:
+            vals.append(project_id)
+            conn.execute(f"UPDATE projects SET {', '.join(sets)} WHERE id = ?", vals)
+    log_audit(user["id"], "update", "project", project_id)
+    # redirect back to referring page
+    redirect_url = form.get("redirect", f"/app/projects/{project_id}")
+    return RedirectResponse(url=redirect_url, status_code=303)
+
+
 @router.get("/{project_id}", response_class=HTMLResponse)
 async def project_detail(
     request: Request,
@@ -160,6 +202,7 @@ async def project_detail(
                 "SELECT id, email, display_name, role, project_ids FROM collaborators WHERE revoked = 0"
             ).fetchall()
         )
+        clients = rows_to_list(conn.execute("SELECT * FROM clients ORDER BY name").fetchall())
 
     show_finance = user["role"] == "admin"
     if user["role"] == "viewer":
@@ -192,6 +235,7 @@ async def project_detail(
             "boq_templates": templates_list,
             "invoices": invoices if show_finance else [],
             "collaborators": collaborators if show_finance else [],
+            "clients": clients,
             "defaults": defaults,
             "status_labels": STATUS_LABELS,
             "show_finance": show_finance,
@@ -214,6 +258,70 @@ async def save_brief(
         )
     log_audit(user["id"], "update", "project_brief", project_id)
     return RedirectResponse(url=f"/app/projects/{project_id}?tab=brief", status_code=303)
+
+
+# ---------------------------------------------------------------------------
+# 发票管理
+# ---------------------------------------------------------------------------
+@router.post("/{project_id}/invoices/add")
+async def add_invoice(
+    project_id: int,
+    type: str = Form(...),
+    amount: float = Form(...),
+    due_date: str = Form(""),
+    invoice_number: str = Form(""),
+    user: dict = Depends(require_admin),
+):
+    if not user_can_access_project(user, project_id):
+        raise HTTPException(status_code=403)
+    with db_session() as conn:
+        conn.execute(
+            """
+            INSERT INTO invoices (project_id, type, amount, due_date, invoice_number)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (project_id, type, amount, due_date or None, invoice_number or None),
+        )
+    return RedirectResponse(url=f"/app/projects/{project_id}?tab=finance", status_code=303)
+
+
+@router.post("/{project_id}/invoices/{invoice_id}/delete")
+async def delete_invoice(
+    project_id: int,
+    invoice_id: int,
+    user: dict = Depends(require_admin),
+):
+    if not user_can_access_project(user, project_id):
+        raise HTTPException(status_code=403)
+    with db_session() as conn:
+        conn.execute(
+            "DELETE FROM invoices WHERE id = ? AND project_id = ?",
+            (invoice_id, project_id),
+        )
+    return RedirectResponse(url=f"/app/projects/{project_id}?tab=finance", status_code=303)
+
+
+@router.post("/{project_id}/invoices/{invoice_id}/toggle")
+async def toggle_invoice(
+    project_id: int,
+    invoice_id: int,
+    user: dict = Depends(require_admin),
+):
+    if not user_can_access_project(user, project_id):
+        raise HTTPException(status_code=403)
+    with db_session() as conn:
+        row = conn.execute(
+            "SELECT paid FROM invoices WHERE id = ? AND project_id = ?",
+            (invoice_id, project_id),
+        ).fetchone()
+        if not row:
+            raise HTTPException(status_code=404)
+        new_paid = 0 if row["paid"] else 1
+        conn.execute(
+            "UPDATE invoices SET paid = ?, paid_at = ? WHERE id = ?",
+            (new_paid, "CURRENT_TIMESTAMP" if new_paid else None, invoice_id),
+        )
+    return RedirectResponse(url=f"/app/projects/{project_id}?tab=finance", status_code=303)
 
 
 @router.post("/{project_id}/feedback")
@@ -293,6 +401,57 @@ async def create_quote(
     )
 
 
+@router.post("/{project_id}/quote/new-space")
+async def create_space_quote(
+    project_id: int,
+    user: dict = Depends(get_current_user),
+):
+    """创建空间分区报价（空白起步，可后续添加空间和项目）."""
+    if not user_can_access_project(user, project_id) or user["role"] == "viewer":
+        raise HTTPException(status_code=403)
+
+    defaults = get_studio_defaults()
+    structure = {"mode": "spaces", "spaces": []}
+
+    totals = calculate_quote_totals(
+        structure,
+        defaults["design_fee_pct"],
+        defaults["management_fee_pct"],
+        defaults["tax_pct"],
+        defaults["margin_pct"],
+    )
+    with db_session() as conn:
+        version = conn.execute(
+            "SELECT COALESCE(MAX(version), 0) + 1 FROM quotes WHERE project_id = ?",
+            (project_id,),
+        ).fetchone()[0]
+        conn.execute(
+            """
+            INSERT INTO quotes (project_id, version, template_id, json_detail,
+                                direct_cost, design_fee_pct, management_fee_pct,
+                                tax_pct, margin_pct, total)
+            VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                project_id,
+                version,
+                json.dumps(structure, ensure_ascii=False),
+                totals["direct_cost"],
+                defaults["design_fee_pct"],
+                defaults["management_fee_pct"],
+                defaults["tax_pct"],
+                defaults["margin_pct"],
+                totals["total"],
+            ),
+        )
+        quote_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+
+    return RedirectResponse(
+        url=f"/app/projects/{project_id}?tab=quote&quote_id={quote_id}",
+        status_code=303,
+    )
+
+
 @router.post("/{project_id}/quote/{quote_id}/update")
 async def update_quote(
     project_id: int,
@@ -333,6 +492,76 @@ async def update_quote(
                 json.dumps(detail, ensure_ascii=False),
                 totals["direct_cost"],
                 totals["total"],
+                quote_id,
+            ),
+        )
+
+    return RedirectResponse(
+        url=f"/app/projects/{project_id}?tab=quote&quote_id={quote_id}",
+        status_code=303,
+    )
+
+
+@router.post("/{project_id}/quote/{quote_id}/update-space")
+async def update_space_quote(
+    project_id: int,
+    quote_id: int,
+    request: Request,
+    user: dict = Depends(get_current_user),
+):
+    """更新空间分区报价 — 前端提交 JSON 字符串."""
+    if not user_can_access_project(user, project_id) or user["role"] == "viewer":
+        raise HTTPException(status_code=403)
+
+    form = await request.form()
+    spaces_json = form.get("spaces_json", "[]")
+    design_fee_pct = float(form.get("design_fee_pct", 0) or 0)
+    management_fee_pct = float(form.get("management_fee_pct", 0) or 0)
+    tax_pct = float(form.get("tax_pct", 0) or 0)
+    margin_pct = float(form.get("margin_pct", 0) or 0)
+
+    try:
+        parsed = json.loads(spaces_json)
+        # 前端可能提交 {mode, spaces} 或直接 [space, ...]
+        if isinstance(parsed, dict) and "spaces" in parsed:
+            spaces = parsed["spaces"]
+        elif isinstance(parsed, list):
+            spaces = parsed
+        else:
+            spaces = []
+    except (json.JSONDecodeError, TypeError):
+        spaces = []
+
+    detail = {"mode": "spaces", "spaces": spaces}
+
+    with db_session() as conn:
+        quote = row_to_dict(
+            conn.execute("SELECT * FROM quotes WHERE id = ? AND project_id = ?", (quote_id, project_id)).fetchone()
+        )
+        if not quote:
+            raise HTTPException(status_code=404)
+
+        totals = calculate_quote_totals(
+            detail,
+            design_fee_pct,
+            management_fee_pct,
+            tax_pct,
+            margin_pct,
+        )
+        conn.execute(
+            """
+            UPDATE quotes SET json_detail = ?, direct_cost = ?, total = ?,
+                design_fee_pct = ?, management_fee_pct = ?, tax_pct = ?, margin_pct = ?
+            WHERE id = ?
+            """,
+            (
+                json.dumps(detail, ensure_ascii=False),
+                totals["direct_cost"],
+                totals["total"],
+                design_fee_pct,
+                management_fee_pct,
+                tax_pct,
+                margin_pct,
                 quote_id,
             ),
         )
@@ -409,4 +638,55 @@ async def quote_word(project_id: int, quote_id: int, user: dict = Depends(get_cu
         content=word_bytes,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": f'attachment; filename="quote-{project["code"]}-v{quote["version"]}.docx"'},
+    )
+
+
+@router.get("/{project_id}/quote/{quote_id}/preview", response_class=HTMLResponse)
+async def quote_preview(
+    project_id: int,
+    quote_id: int,
+    request: Request,
+    user: dict = Depends(get_current_user),
+):
+    """HTML 报价预览 — 打印友好."""
+    if not user_can_access_project(user, project_id):
+        raise HTTPException(status_code=403)
+
+    project = _get_project_or_404(project_id)
+    with db_session() as conn:
+        quote = row_to_dict(
+            conn.execute("SELECT * FROM quotes WHERE id = ? AND project_id = ?", (quote_id, project_id)).fetchone()
+        )
+        studio = row_to_dict(conn.execute("SELECT * FROM studio_profile WHERE id = 1").fetchone())
+        client = None
+        if project.get("client_id"):
+            client = row_to_dict(
+                conn.execute("SELECT * FROM clients WHERE id = ?", (project["client_id"],)).fetchone()
+            )
+
+    if not quote:
+        raise HTTPException(status_code=404)
+
+    detail = json.loads(quote["json_detail"]) if isinstance(quote["json_detail"], str) else quote["json_detail"]
+    # 确保数量和小计已计算
+    totals = calculate_quote_totals(
+        detail,
+        quote["design_fee_pct"],
+        quote["management_fee_pct"],
+        quote["tax_pct"],
+        quote["margin_pct"],
+    )
+
+    return templates.TemplateResponse(
+        "app/projects/quote_preview.html",
+        {
+            "request": request,
+            "user": user,
+            "project": project,
+            "quote": quote,
+            "detail": detail,
+            "totals": totals,
+            "studio": studio or {},
+            "client": client or {},
+        },
     )

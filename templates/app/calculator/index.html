@@ -1,0 +1,280 @@
+{% extends "app/base.html" %}
+{% block title %}工程计算器 — Studio OS{% endblock %}
+{% block content %}
+<div class="app-header">
+  <h1>工程计算器</h1>
+  <p style="color:var(--color-text-secondary);font-size:.875rem;margin-top:4px">快速计算面积、墙面、贴砖量等工程数据</p>
+</div>
+
+<div class="tabs">
+  <a class="tab active" onclick="switchCalc('area')" id="tab-area">面积计算</a>
+  <a class="tab" onclick="switchCalc('wall')" id="tab-wall">墙面面积</a>
+  <a class="tab" onclick="switchCalc('tile')" id="tab-tile">贴砖用量</a>
+  <a class="tab" onclick="switchCalc('paint')" id="tab-paint">涂料用量</a>
+</div>
+
+{# ── 面积计算 ── #}
+<div id="calc-area" class="calc-panel">
+  <div class="card">
+    <h3 style="margin-bottom:16px">矩形面积计算</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;align-items:end">
+      <div class="form-group" style="margin:0">
+        <label>长度 (m)</label>
+        <input type="number" id="areaL" step="0.01" value="0" oninput="calcArea()">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>宽度 (m)</label>
+        <input type="number" id="areaW" step="0.01" value="0" oninput="calcArea()">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>数量 (间)</label>
+        <input type="number" id="areaN" step="1" value="1" oninput="calcArea()">
+      </div>
+    </div>
+    <div class="calc-result" id="areaResult" style="margin-top:16px">
+      <span class="calc-label">面积</span>
+      <span class="calc-value">0.00 ㎡</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-bottom:16px">多区域面积汇总</h3>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <input type="text" id="multiName" placeholder="区域名称（如：客厅）" style="flex:1">
+      <input type="number" id="multiArea" placeholder="面积㎡" step="0.01" style="width:100px">
+      <button type="button" class="btn" onclick="addMultiArea()">添加</button>
+    </div>
+    <table id="multiAreaTable">
+      <thead><tr><th>区域</th><th>面积</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="calc-result" id="multiAreaResult" style="margin-top:12px">
+      <span class="calc-label">总面积</span>
+      <span class="calc-value">0.00 ㎡</span>
+    </div>
+  </div>
+</div>
+
+{# ── 墙面面积 ── #}
+<div id="calc-wall" class="calc-panel" style="display:none">
+  <div class="card">
+    <h3 style="margin-bottom:16px">墙面面积计算</h3>
+    <p style="font-size:.8125rem;color:var(--color-text-secondary);margin-bottom:16px">公式：(长 + 宽) × 2 × 层高 - 门窗面积</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px;align-items:end">
+      <div class="form-group" style="margin:0">
+        <label>房间长 (m)</label>
+        <input type="number" id="wallL" step="0.01" value="0" oninput="calcWall()">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>房间宽 (m)</label>
+        <input type="number" id="wallW" step="0.01" value="0" oninput="calcWall()">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>层高 (m)</label>
+        <input type="number" id="wallH" step="0.01" value="2.8" oninput="calcWall()">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>门面积 (㎡)</label>
+        <input type="number" id="wallDoor" step="0.01" value="2.0" oninput="calcWall()">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>窗面积 (㎡)</label>
+        <input type="number" id="wallWindow" step="0.01" value="3.0" oninput="calcWall()">
+      </div>
+    </div>
+    <div class="calc-result" id="wallResult" style="margin-top:16px">
+      <span class="calc-label">墙面面积</span>
+      <span class="calc-value">0.00 ㎡</span>
+    </div>
+    <div style="margin-top:8px;font-size:.8125rem;color:var(--color-text-tertiary)">
+      <span>周长：<span id="wallPerimeter">0.00</span> m</span>
+      <span style="margin-left:16px">地面面积：<span id="wallFloor">0.00</span> ㎡</span>
+    </div>
+  </div>
+</div>
+
+{# ── 贴砖用量 ── #}
+<div id="calc-tile" class="calc-panel" style="display:none">
+  <div class="card">
+    <h3 style="margin-bottom:16px">贴砖用量计算</h3>
+    <p style="font-size:.8125rem;color:var(--color-text-secondary);margin-bottom:16px">公式：铺贴面积 ÷ 单片砖面积 × (1 + 损耗率)</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px;align-items:end">
+      <div class="form-group" style="margin:0">
+        <label>铺贴面积 (㎡)</label>
+        <input type="number" id="tileArea" step="0.01" value="0" oninput="calcTile()">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>砖长 (mm)</label>
+        <input type="number" id="tileL" step="1" value="800" oninput="calcTile()">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>砖宽 (mm)</label>
+        <input type="number" id="tileW" step="1" value="800" oninput="calcTile()">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>损耗率 (%)</label>
+        <input type="number" id="tileWaste" step="1" value="5" oninput="calcTile()">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>每箱片数</label>
+        <input type="number" id="tilePerBox" step="1" value="3" oninput="calcTile()">
+      </div>
+    </div>
+    <div class="calc-result" id="tileResult" style="margin-top:16px">
+      <span class="calc-label">需用片数</span>
+      <span class="calc-value">0 片</span>
+    </div>
+    <div style="margin-top:8px;font-size:.8125rem;color:var(--color-text-tertiary)">
+      <span>单片面积：<span id="tileSingleArea">0.00</span> ㎡</span>
+      <span style="margin-left:16px">建议购买箱数：<span id="tileBoxes">0</span> 箱</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-bottom:12px">常见砖规格速查</h3>
+    <table>
+      <thead><tr><th>名称</th><th>规格 (mm)</th><th>单片面积 (㎡)</th><th>每㎡片数</th></tr></thead>
+      <tbody>
+        <tr><td>地砖 800×800</td><td>800 × 800</td><td>0.64</td><td>1.56</td></tr>
+        <tr><td>地砖 600×1200</td><td>600 × 1200</td><td>0.72</td><td>1.39</td></tr>
+        <tr><td>地砖 750×1500</td><td>750 × 1500</td><td>1.125</td><td>0.89</td></tr>
+        <tr><td>墙砖 300×600</td><td>300 × 600</td><td>0.18</td><td>5.56</td></tr>
+        <tr><td>墙砖 600×1200</td><td>600 × 1200</td><td>0.72</td><td>1.39</td></tr>
+        <tr><td>墙砖 750×1500</td><td>750 × 1500</td><td>1.125</td><td>0.89</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{# ── 涂料用量 ── #}
+<div id="calc-paint" class="calc-panel" style="display:none">
+  <div class="card">
+    <h3 style="margin-bottom:16px">涂料用量计算</h3>
+    <p style="font-size:.8125rem;color:var(--color-text-secondary);margin-bottom:16px">公式：涂刷面积 ÷ 每升涂刷面积 × 遍数 ÷ 每桶升数</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px;align-items:end">
+      <div class="form-group" style="margin:0">
+        <label>涂刷面积 (㎡)</label>
+        <input type="number" id="paintArea" step="0.01" value="0" oninput="calcPaint()">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>每升涂刷 (㎡/L)</label>
+        <input type="number" id="paintCoverage" step="0.1" value="10" oninput="calcPaint()">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>涂刷遍数</label>
+        <input type="number" id="paintCoats" step="1" value="2" oninput="calcPaint()">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>每桶容量 (L)</label>
+        <input type="number" id="paintPerCan" step="1" value="18" oninput="calcPaint()">
+      </div>
+    </div>
+    <div class="calc-result" id="paintResult" style="margin-top:16px">
+      <span class="calc-label">需用涂料</span>
+      <span class="calc-value">0 L</span>
+    </div>
+    <div style="margin-top:8px;font-size:.8125rem;color:var(--color-text-tertiary)">
+      <span>建议购买桶数：<span id="paintCans">0</span> 桶</span>
+    </div>
+  </div>
+</div>
+
+<style>
+.calc-panel { animation: fadeIn .2s ease; }
+.calc-result {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--color-elevated);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+}
+.calc-label { color: var(--color-text-secondary); font-size: .875rem; }
+.calc-value { font-size: 1.5rem; font-weight: 700; color: var(--color-accent); }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+</style>
+
+<script>
+function switchCalc(name) {
+  document.querySelectorAll('.calc-panel').forEach(p => p.style.display = 'none');
+  document.getElementById('calc-' + name).style.display = 'block';
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+function calcArea() {
+  const l = parseFloat(document.getElementById('areaL').value) || 0;
+  const w = parseFloat(document.getElementById('areaW').value) || 0;
+  const n = parseInt(document.getElementById('areaN').value) || 1;
+  const area = l * w * n;
+  document.querySelector('#areaResult .calc-value').textContent = area.toFixed(2) + ' ㎡';
+}
+
+let multiAreas = [];
+function addMultiArea() {
+  const name = document.getElementById('multiName').value || '区域' + (multiAreas.length + 1);
+  const area = parseFloat(document.getElementById('multiArea').value) || 0;
+  if (area <= 0) return;
+  multiAreas.push({ name, area });
+  document.getElementById('multiName').value = '';
+  document.getElementById('multiArea').value = '';
+  renderMultiArea();
+}
+function removeMultiArea(i) {
+  multiAreas.splice(i, 1);
+  renderMultiArea();
+}
+function renderMultiArea() {
+  const tbody = document.querySelector('#multiAreaTable tbody');
+  tbody.innerHTML = '';
+  let total = 0;
+  multiAreas.forEach((a, i) => {
+    total += a.area;
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + a.name + '</td><td>' + a.area.toFixed(2) + ' ㎡</td>' +
+      '<td><button type="button" style="background:none;border:none;color:var(--color-error);cursor:pointer;font-size:.75rem" onclick="removeMultiArea(' + i + ')">✕</button></td>';
+    tbody.appendChild(tr);
+  });
+  document.querySelector('#multiAreaResult .calc-value').textContent = total.toFixed(2) + ' ㎡';
+}
+
+function calcWall() {
+  const l = parseFloat(document.getElementById('wallL').value) || 0;
+  const w = parseFloat(document.getElementById('wallW').value) || 0;
+  const h = parseFloat(document.getElementById('wallH').value) || 0;
+  const door = parseFloat(document.getElementById('wallDoor').value) || 0;
+  const win = parseFloat(document.getElementById('wallWindow').value) || 0;
+  const perimeter = (l + w) * 2;
+  const wallArea = perimeter * h - door - win;
+  const floor = l * w;
+  document.querySelector('#wallResult .calc-value').textContent = wallArea.toFixed(2) + ' ㎡';
+  document.getElementById('wallPerimeter').textContent = perimeter.toFixed(2);
+  document.getElementById('wallFloor').textContent = floor.toFixed(2);
+}
+
+function calcTile() {
+  const area = parseFloat(document.getElementById('tileArea').value) || 0;
+  const l = (parseFloat(document.getElementById('tileL').value) || 0) / 1000;
+  const w = (parseFloat(document.getElementById('tileW').value) || 0) / 1000;
+  const waste = (parseFloat(document.getElementById('tileWaste').value) || 0) / 100;
+  const perBox = parseInt(document.getElementById('tilePerBox').value) || 1;
+  const singleArea = l * w;
+  const tilesNeeded = singleArea > 0 ? Math.ceil(area / singleArea * (1 + waste)) : 0;
+  const boxes = perBox > 0 ? Math.ceil(tilesNeeded / perBox) : 0;
+  document.querySelector('#tileResult .calc-value').textContent = tilesNeeded + ' 片';
+  document.getElementById('tileSingleArea').textContent = singleArea.toFixed(4);
+  document.getElementById('tileBoxes').textContent = boxes;
+}
+
+function calcPaint() {
+  const area = parseFloat(document.getElementById('paintArea').value) || 0;
+  const coverage = parseFloat(document.getElementById('paintCoverage').value) || 1;
+  const coats = parseInt(document.getElementById('paintCoats').value) || 1;
+  const perCan = parseFloat(document.getElementById('paintPerCan').value) || 1;
+  const liters = coverage > 0 ? (area / coverage * coats) : 0;
+  const cans = perCan > 0 ? Math.ceil(liters / perCan) : 0;
+  document.querySelector('#paintResult .calc-value').textContent = liters.toFixed(1) + ' L';
+  document.getElementById('paintCans').textContent = cans;
+}
+</script>
+{% endblock %}

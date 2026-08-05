@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import BASE_DIR
-from app.routers import app_auth, app_dashboard, library, projects, public, quotes, settings
+from app.routers import app_auth, app_dashboard, calculator, catalog, library, projects, public, quotes, settings
 
 app = FastAPI(title="Studio OS", version="1.0.0", docs_url=None, redoc_url=None)
 
@@ -44,6 +44,8 @@ app.include_router(app_dashboard.router)
 app.include_router(projects.router)
 app.include_router(library.router)
 app.include_router(quotes.router)
+app.include_router(catalog.router)
+app.include_router(calculator.router)
 app.include_router(settings.router)
 
 

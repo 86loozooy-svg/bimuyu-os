@@ -202,6 +202,25 @@ CREATE TABLE IF NOT EXISTS pages (
   title TEXT,
   body_md TEXT
 );
+
+CREATE TABLE IF NOT EXISTS price_catalog (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  unit TEXT DEFAULT '㎡',
+  price REAL DEFAULT 0,
+  category TEXT DEFAULT '其他',
+  note TEXT,
+  factor REAL,
+  sort_order INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS space_presets (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  space_type TEXT,
+  items_json TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 
@@ -422,6 +441,85 @@ Studio OS 设计工作室由一位独立设计师主理，专注工装空间、�
                     (date.today() + timedelta(days=45)).isoformat(),
                 ),
             )
+
+        if conn.execute("SELECT COUNT(*) FROM price_catalog").fetchone()[0] == 0:
+            catalog_items = [
+                ("强电改造", "位", 120, "水电", "含线管、电线、人工", None, 1),
+                ("弱电改造", "位", 100, "水电", "网线/电视线/电话线点位", None, 2),
+                ("水路改造 PPR管", "m", 85, "水电", "冷热水管铺设", None, 3),
+                ("下水改造 PVC管", "m", 95, "水电", "排水管改造", None, 4),
+                ("开关插座安装", "位", 18, "水电", "不含面板", None, 5),
+                ("石膏板平面吊顶", "㎡", 212, "木工", "轻钢龙骨+石膏板", 1.0, 6),
+                ("石膏板直线灯池造型跌级吊顶", "m", 208, "木工", "直线灯池/跌级造型", None, 7),
+                ("耐水石膏板平面吊顶", "㎡", 264, "木工", "厨房/卫生间适用", 1.0, 8),
+                ("欧松板衬底", "㎡", 300, "木工", "基层衬底", None, 9),
+                ("木制窗帘盒", "m", 153, "木工", "墙漆饰面", None, 10),
+                ("普贴瓷砖 800×800", "㎡", 60, "瓦工", "800×800 普通铺贴", 1.0, 11),
+                ("普贴地砖 75×150", "㎡", 168, "瓦工", "750×1500 普通铺贴", 1.0, 12),
+                ("薄贴墙砖 60×120", "㎡", 180, "瓦工", "600×1200 薄贴", None, 13),
+                ("薄贴墙砖 75×150", "㎡", 220, "瓦工", "750×1500 薄贴", None, 14),
+                ("铺贴地砖 600×1200", "㎡", 94, "瓦工", "600×1200 地砖铺贴", 1.0, 15),
+                ("墙地面做防水", "㎡", 132, "瓦工", "聚合物水泥防水", None, 16),
+                ("地面砂浆干铺垫层", "㎡", 30, "瓦工", "水泥砂浆垫层", 1.0, 17),
+                ("墙基层水泥砂浆找平", "㎡", 56, "瓦工", "墙面基层找平", None, 18),
+                ("墙基层披刮专用腻子", "㎡", 50, "油工", "环保腻子 2遍", None, 19),
+                ("内墙乳胶漆", "㎡", 19, "油工", "一底两面", None, 20),
+                ("墙面铲除", "㎡", 18, "油工", "旧墙面铲除", None, 21),
+                ("石膏找平", "㎡", 35, "油工", "局部找平修补", None, 22),
+                ("过门石安装", "块", 58, "其他", "人工安装", None, 23),
+                ("轻体砖围砌管道", "m", 193, "其他", "厨卫包管", None, 24),
+                ("厨卫管道降噪防潮", "m", 45, "其他", "隔音棉+防潮处理", None, 25),
+                ("瓷砖壁龛砌筑", "项", 800, "其他", "卫生间壁龛", None, 26),
+                ("垃圾清运", "项", 800, "其他", "运至小区指定点", None, 27),
+                ("成品保护", "项", 500, "其他", "保护膜+胶带", None, 28),
+            ]
+            conn.executemany(
+                """
+                INSERT INTO price_catalog (name, unit, price, category, note, factor, sort_order)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                catalog_items,
+            )
+
+        if conn.execute("SELECT COUNT(*) FROM space_presets").fetchone()[0] == 0:
+            presets = [
+                ("客厅", "客厅", json.dumps([
+                    {"name": "石膏板平面吊顶", "unit": "㎡", "factor": 1.0, "price": 212, "category": "木工"},
+                    {"name": "石膏板直线灯池造型跌级吊顶", "unit": "m", "factor": 0.55, "price": 208, "category": "木工"},
+                    {"name": "内墙乳胶漆", "unit": "㎡", "factor": 1.15, "price": 19, "category": "油工"},
+                    {"name": "墙基层披刮专用腻子", "unit": "㎡", "factor": 1.25, "price": 50, "category": "油工"},
+                    {"name": "地面砂浆干铺垫层", "unit": "㎡", "factor": 1.0, "price": 30, "category": "瓦工"},
+                    {"name": "铺贴地砖 600×1200", "unit": "㎡", "factor": 1.0, "price": 94, "category": "瓦工"},
+                ], ensure_ascii=False)),
+                ("卧室", "卧室", json.dumps([
+                    {"name": "石膏板平面吊顶", "unit": "㎡", "factor": 1.0, "price": 212, "category": "木工"},
+                    {"name": "内墙乳胶漆", "unit": "㎡", "factor": 2.10, "price": 19, "category": "油工"},
+                    {"name": "墙基层披刮专用腻子", "unit": "㎡", "factor": 2.50, "price": 45, "category": "油工"},
+                    {"name": "地面砂浆干铺垫层", "unit": "㎡", "factor": 1.0, "price": 30, "category": "瓦工"},
+                    {"name": "普贴地砖 75×150", "unit": "㎡", "factor": 1.0, "price": 168, "category": "瓦工"},
+                ], ensure_ascii=False)),
+                ("厨房", "厨房", json.dumps([
+                    {"name": "耐水石膏板平面吊顶", "unit": "㎡", "factor": 1.0, "price": 264, "category": "木工"},
+                    {"name": "墙基层水泥砂浆找平", "unit": "㎡", "factor": 2.50, "price": 48, "category": "瓦工"},
+                    {"name": "薄贴墙砖 60×120", "unit": "㎡", "factor": 2.80, "price": 180, "category": "瓦工"},
+                    {"name": "地面砂浆干铺垫层", "unit": "㎡", "factor": 1.0, "price": 30, "category": "瓦工"},
+                    {"name": "铺贴地砖 600×1200", "unit": "㎡", "factor": 1.0, "price": 94, "category": "瓦工"},
+                    {"name": "轻体砖围砌管道", "unit": "m", "fixed": 3, "price": 193, "category": "其他"},
+                ], ensure_ascii=False)),
+                ("卫生间", "卫生间", json.dumps([
+                    {"name": "耐水石膏板平面吊顶", "unit": "㎡", "factor": 1.0, "price": 264, "category": "木工"},
+                    {"name": "墙基层水泥砂浆找平", "unit": "㎡", "factor": 3.00, "price": 56, "category": "瓦工"},
+                    {"name": "薄贴墙砖 60×120", "unit": "㎡", "factor": 5.00, "price": 180, "category": "瓦工"},
+                    {"name": "墙地面做防水", "unit": "㎡", "factor": 2.40, "price": 132, "category": "瓦工"},
+                    {"name": "地面砂浆干铺垫层", "unit": "㎡", "factor": 1.0, "price": 30, "category": "瓦工"},
+                    {"name": "铺贴地砖 600×1200", "unit": "㎡", "factor": 1.0, "price": 94, "category": "瓦工"},
+                ], ensure_ascii=False)),
+            ]
+            for name, space_type, items_json in presets:
+                conn.execute(
+                    "INSERT INTO space_presets (name, space_type, items_json) VALUES (?, ?, ?)",
+                    (name, space_type, items_json),
+                )
 
 
 def ensure_data_dirs() -> None:

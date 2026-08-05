@@ -3,11 +3,34 @@
 {% block content %}
 <div class="app-header">
   <h1>项目列表</h1>
+  <p style="color:var(--color-text-secondary);font-size:.875rem;margin-top:4px">共 {{ projects | length }} 个项目</p>
 </div>
 
-<div class="card">
+{# ── 筛选 ── #}
+<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:end">
+  <div class="form-group" style="margin:0">
+    <label>状态筛选</label>
+    <select id="filterStatus" onchange="filterProjects()" style="min-width:100px">
+      <option value="">全部</option>
+      {% for key, label in status_labels.items() %}
+      <option value="{{ key }}">{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="form-group" style="margin:0;flex:1;min-width:200px">
+    <label>搜索</label>
+    <input type="text" id="searchInput" oninput="filterProjects()" placeholder="项目名/编号/客户">
+  </div>
+  {% if user.role == 'admin' %}
+  <button type="button" class="btn" onclick="document.getElementById('newProjectForm').style.display='block'">+ 新建项目</button>
+  {% endif %}
+</div>
+
+{# ── 新建项目 (折叠) ── #}
+{% if user.role == 'admin' %}
+<div id="newProjectForm" class="card" style="display:none;margin-bottom:16px">
   <h3 style="margin-bottom:16px">新建项目</h3>
-  <form method="post" action="/app/projects/new" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;align-items:end">
+  <form method="post" action="/app/projects/new" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;align-items:end">
     <div class="form-group" style="margin:0">
       <label>项目名称</label>
       <input type="text" name="name" required placeholder="例：某某咖啡店设计">
@@ -35,29 +58,97 @@
       <label>面积 (㎡)</label>
       <input type="number" name="area" step="0.1" value="0">
     </div>
+    <div class="form-group" style="margin:0">
+      <label>初始状态</label>
+      <select name="status">
+        <option value="lead">线索</option>
+        <option value="brief">Brief</option>
+        <option value="quoting">报价中</option>
+      </select>
+    </div>
     <button type="submit" class="btn">创建</button>
   </form>
 </div>
+{% endif %}
 
-<div class="card">
-  <table>
-    <thead>
-      <tr><th>编号</th><th>名称</th><th>客户</th><th>行业</th><th>阶段</th><th>截止</th></tr>
-    </thead>
-    <tbody>
-      {% for p in projects %}
-      <tr>
-        <td><a href="/app/projects/{{ p.id }}">{{ p.code }}</a></td>
-        <td>{{ p.name }}</td>
-        <td>{{ p.client_name or '—' }}</td>
-        <td>{{ p.industry or '—' }}</td>
-        <td><span class="badge">{{ status_labels.get(p.status, p.status) }}</span></td>
-        <td>{{ p.deadline or '—' }}</td>
-      </tr>
-      {% else %}
-      <tr><td colspan="6" style="color:var(--muted)">暂无项目</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+{# ── 项目卡片网格 ── #}
+<div id="projectGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px">
+  {% for p in projects %}
+  <div class="card project-card" data-status="{{ p.status }}" data-search="{{ p.name | lower }} {{ p.code | lower }} {{ (p.client_name or '') | lower }}" style="padding:0;overflow:hidden;cursor:pointer" onclick="window.location='/app/projects/{{ p.id }}'">
+    {# 卡片头部：状态色条 + 标题 #}
+    <div style="padding:16px 20px 12px;border-top:3px solid {% if p.status == 'lead' %}#9B9B9B{% elif p.status == 'brief' %}#3DD7E5{% elif p.status == 'quoting' %}#F5A623{% elif p.status == 'signed' %}#7ED321{% elif p.status == 'designing' %}#BD10E0{% elif p.status == 'delivering' %}#007AFF{% else %}#34C759{% endif %}">
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
+        <div>
+          <div style="font-weight:600;font-size:.9375rem;color:var(--color-text-primary)">{{ p.name }}</div>
+          <div style="font-size:.75rem;color:var(--color-text-tertiary);margin-top:2px">{{ p.code }}</div>
+        </div>
+        <span class="badge status-pill-{{ p.status }}" style="white-space:nowrap">{{ status_labels.get(p.status, p.status) }}</span>
+      </div>
+
+      {# 客户 + 行业 #}
+      <div style="display:flex;gap:12px;font-size:.8125rem;color:var(--color-text-secondary);margin-bottom:10px">
+        <span>{{ p.client_name or '无客户' }}</span>
+        {% if p.industry %}<span>·</span><span>{{ p.industry }}</span>{% endif %}
+      </div>
+
+      {# 指标行 #}
+      <div style="display:flex;gap:16px;font-size:.8125rem">
+        {% if p.area %}
+        <div>
+          <div style="color:var(--color-text-tertiary);font-size:.6875rem">面积</div>
+          <div style="font-weight:500">{{ p.area }}㎡</div>
+        </div>
+        {% endif %}
+        {% if p.budget_min or p.budget_max %}
+        <div>
+          <div style="color:var(--color-text-tertiary);font-size:.6875rem">预算</div>
+          <div style="font-weight:500">
+            {% if p.budget_min %}¥{{ '{:,.0f}'.format(p.budget_min) }}{% endif %}
+            {% if p.budget_min and p.budget_max %}—{% endif %}
+            {% if p.budget_max %}¥{{ '{:,.0f}'.format(p.budget_max) }}{% endif %}
+          </div>
+        </div>
+        {% endif %}
+        {% if p.deadline %}
+        <div>
+          <div style="color:var(--color-text-tertiary);font-size:.6875rem">截止</div>
+          <div style="font-weight:500">{{ p.deadline }}</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# 卡片底部：快速状态切换 (admin only) #}
+    {% if user.role == 'admin' %}
+    <div style="padding:8px 16px;border-top:1px solid var(--color-border);background:var(--color-elevated);display:flex;align-items:center;gap:8px" onclick="event.stopPropagation()">
+      <span style="font-size:.75rem;color:var(--color-text-tertiary)">切换状态：</span>
+      <form method="post" action="/app/projects/{{ p.id }}/edit" style="display:flex">
+        <input type="hidden" name="redirect" value="/app/projects">
+        <select name="status" onchange="this.form.submit()" style="font-size:.75rem;padding:4px 8px;min-width:80px">
+          {% for key, label in status_labels.items() %}
+          <option value="{{ key }}" {% if p.status == key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="card" style="grid-column:1/-1;text-align:center;padding:32px;color:var(--color-text-tertiary)">
+    暂无项目{% if user.role == 'admin' %}，点击右上角"+ 新建项目"创建{% endif %}
+  </div>
+  {% endfor %}
 </div>
+
+<script>
+function filterProjects() {
+  const status = document.getElementById('filterStatus').value;
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  document.querySelectorAll('.project-card').forEach(card => {
+    const matchStatus = !status || card.dataset.status === status;
+    const matchSearch = !search || card.dataset.search.includes(search);
+    card.style.display = (matchStatus && matchSearch) ? '' : 'none';
+  });
+}
+</script>
 {% endblock %}

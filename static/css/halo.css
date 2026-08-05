@@ -20,6 +20,7 @@
   --color-text-primary: #F2F4F8;
   --color-text-secondary: #9AA0AE;
   --color-text-muted: #5C6170;
+  --color-text-faint: #3A3D4A;
 
   /* Action */
   --color-primary: #5B6BFF;
@@ -1004,3 +1005,59 @@ details > summary {
 }
 
 details > summary::-webkit-details-marker { display: none; }
+
+/* ------------------------------------------------------------------------
+   Upload hints — image dimension / format / size guidance
+   ------------------------------------------------------------------------ */
+.upload-hint {
+  margin-top: 8px;
+  padding: 10px 14px;
+  background: var(--color-info-soft);
+  border: 1px solid rgba(61, 215, 229, 0.18);
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+.upload-hint .hint-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--color-info);
+  margin-bottom: 4px;
+  font-size: 0.8rem;
+}
+
+.upload-hint .hint-title svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.upload-hint .hint-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+
+.upload-hint .hint-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.upload-hint .hint-tag strong {
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+.upload-hint .hint-note {
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}

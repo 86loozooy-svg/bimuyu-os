@@ -1,0 +1,199 @@
+{% extends "app/base.html" %}
+{% block title %}单价目录 — Studio OS{% endblock %}
+{% block content %}
+<div class="app-header">
+  <h1>统一单价目录</h1>
+  <p style="color:var(--color-text-secondary);font-size:.875rem;margin-top:4px">管理工种单价、空间预设，报价时直接引用</p>
+</div>
+
+{% if request.query_params.get('imported') %}
+<div style="background:var(--color-success-soft,rgba(52,199,89,.12));border:1px solid rgba(52,199,89,.3);border-radius:var(--radius-md);padding:12px 16px;margin-bottom:16px;color:var(--color-text-primary)">
+  导入完成，共新增 {{ request.query_params.get('imported') }} 条记录
+</div>
+{% endif %}
+
+<div class="tabs">
+  <a class="tab {% if tab != 'presets' %}active{% endif %}" href="?tab=catalog">单价目录</a>
+  <a class="tab {% if tab == 'presets' %}active{% endif %}" href="?tab=presets">空间预设</a>
+</div>
+
+{% if tab != 'presets' %}
+{# ─────────────── 单价目录 Tab ─────────────── #}
+<div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+  {% if user.role == 'admin' %}
+  <details style="flex:1;min-width:300px">
+    <summary style="cursor:pointer;font-weight:600;padding:8px 0;color:var(--color-accent)">+ 新增单价项</summary>
+    <form method="post" action="/app/catalog/add" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-top:12px;align-items:end">
+      <div class="form-group" style="margin:0"><label>名称</label><input name="name" required style="width:100%"></div>
+      <div class="form-group" style="margin:0"><label>单位</label><input name="unit" value="㎡" style="width:60px"></div>
+      <div class="form-group" style="margin:0"><label>单价</label><input type="number" name="price" step="0.01" value="0" style="width:80px"></div>
+      <div class="form-group" style="margin:0"><label>分类</label>
+        <select name="category">
+          {% for c in categories %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group" style="margin:0"><label>系数</label><input type="number" name="factor" step="0.01" placeholder="如1.0" style="width:70px"></div>
+      <div class="form-group" style="margin:0"><label>排序</label><input type="number" name="sort_order" value="0" style="width:60px"></div>
+      <div class="form-group" style="margin:0;grid-column:span 2"><label>备注</label><input name="note" style="width:100%"></div>
+      <button type="submit" class="btn">添加</button>
+    </form>
+  </details>
+
+  <div style="display:flex;gap:8px;align-items:end">
+    <form method="post" action="/app/catalog/import" enctype="multipart/form-data" id="importForm" style="display:flex;gap:6px;align-items:end">
+      <div class="form-group" style="margin:0">
+        <label>导入 CSV / TSV</label>
+        <input type="file" name="file" accept=".csv,.tsv,.txt,.xlsx,.xls" required style="font-size:.75rem">
+      </div>
+      <button type="submit" class="btn btn-outline" style="white-space:nowrap">导入</button>
+    </form>
+    <a href="/app/catalog/export" class="btn btn-outline" style="white-space:nowrap">导出 CSV</a>
+  </div>
+{% endif %}
+</div>
+
+{# 按分类分组显示 #}
+{% set ns = namespace(current_cat='') %}
+{% for item in catalog_items %}
+{% if item.category != ns.current_cat %}
+{% if ns.current_cat %}
+</tbody></table></div>
+{% endif %}
+{% set ns.current_cat = item.category %}
+<div class="card" style="margin-bottom:16px">
+  <h3 style="margin-bottom:12px;color:var(--color-text-primary);font-size:1rem;display:flex;align-items:center;gap:8px">
+    <span style="width:8px;height:8px;border-radius:50%;background:{% if item.category == '水电' %}#3DD7E5{% elif item.category == '木工' %}#F5A623{% elif item.category == '瓦工' %}#BD10E0{% elif item.category == '油工' %}#7ED321{% else %}#9B9B9B{% endif %}"></span>
+    {{ item.category }}
+  </h3>
+  <table>
+    <thead>
+      <tr><th>名称</th><th>单位</th><th>单价</th><th>系数</th><th>备注</th>{% if user.role == 'admin' %}<th>操作</th>{% endif %}</tr>
+    </thead>
+    <tbody>
+{% endif %}
+      <tr id="cat-row-{{ item.id }}">
+        <td>{{ item.name }}</td>
+        <td>{{ item.unit }}</td>
+        <td>¥{{ '{:,.2f}'.format(item.price or 0) }}</td>
+        <td>{{ item.factor if item.factor else '—' }}</td>
+        <td style="color:var(--color-text-tertiary);font-size:.8125rem">{{ item.note or '—' }}</td>
+        {% if user.role == 'admin' %}
+        <td style="white-space:nowrap">
+          <button type="button" class="btn btn-outline" style="padding:4px 10px;font-size:.75rem" onclick="editItem({{ item.id }})">编辑</button>
+          <form method="post" action="/app/catalog/{{ item.id }}/delete" style="display:inline" onsubmit="return confirm('确认删除「{{ item.name }}」？')">
+            <button type="submit" style="background:none;border:none;color:var(--color-error);cursor:pointer;font-size:.75rem">删除</button>
+          </form>
+        </td>
+        {% endif %}
+      </tr>
+      <tr id="cat-edit-{{ item.id }}" style="display:none">
+        <td colspan="{% if user.role == 'admin' %}6{% else %}5{% endif %}" style="background:var(--color-elevated);padding:12px">
+          <form method="post" action="/app/catalog/{{ item.id }}/update" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;align-items:end">
+            <div class="form-group" style="margin:0"><label>名称</label><input name="name" value="{{ item.name }}" style="width:100%"></div>
+            <div class="form-group" style="margin:0"><label>单位</label><input name="unit" value="{{ item.unit }}" style="width:60px"></div>
+            <div class="form-group" style="margin:0"><label>单价</label><input type="number" name="price" value="{{ item.price or 0 }}" step="0.01" style="width:80px"></div>
+            <div class="form-group" style="margin:0"><label>分类</label>
+              <select name="category">
+                {% for c in categories %}<option value="{{ c }}" {% if item.category == c %}selected{% endif %}>{{ c }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="form-group" style="margin:0"><label>系数</label><input type="number" name="factor" value="{{ item.factor or '' }}" step="0.01" style="width:70px"></div>
+            <div class="form-group" style="margin:0"><label>排序</label><input type="number" name="sort_order" value="{{ item.sort_order }}" style="width:60px"></div>
+            <div class="form-group" style="margin:0;grid-column:span 2"><label>备注</label><input name="note" value="{{ item.note or '' }}" style="width:100%"></div>
+            <div style="display:flex;gap:6px">
+              <button type="submit" class="btn" style="padding:6px 12px;font-size:.75rem">保存</button>
+              <button type="button" class="btn btn-outline" style="padding:6px 12px;font-size:.75rem" onclick="cancelEdit({{ item.id }})">取消</button>
+            </div>
+          </form>
+        </td>
+      </tr>
+{% endfor %}
+{% if catalog_items %}
+</tbody></table></div>
+{% else %}
+<div class="card" style="text-align:center;padding:32px;color:var(--color-text-tertiary)">暂无单价数据{% if user.role == 'admin' %}，点击上方"+ 新增单价项"或导入 CSV{% endif %}</div>
+{% endif %}
+
+{% if user.role == 'admin' %}
+<div class="upload-hint" style="margin-top:16px">
+  <div class="hint-row">
+    <strong>导入格式：</strong>支持 CSV / TSV / Excel (.xlsx)，带表头。列顺序：名称, 单位, 单价, 分类, 系数, 备注。分类可选值：水电/木工/瓦工/油工/其他。
+  </div>
+  <div class="hint-note">也支持无表头文件，按上述顺序识别。导出的 CSV 可直接编辑后重新导入。</div>
+</div>
+{% endif %}
+
+{% else %}
+{# ─────────────── 空间预设 Tab ─────────────── #}
+<div style="margin-bottom:16px">
+  {% if user.role == 'admin' %}
+  <details>
+    <summary style="cursor:pointer;font-weight:600;padding:8px 0;color:var(--color-accent)">+ 新增空间预设</summary>
+    <form method="post" action="/app/catalog/presets/add" style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap;align-items:end">
+      <div class="form-group" style="margin:0">
+        <label>预设名称</label>
+        <input name="name" required placeholder="如：阳台">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>空间类型</label>
+        <input name="space_type" placeholder="如：阳台">
+      </div>
+      <div class="form-group" style="margin:0;flex:1;min-width:400px">
+        <label>项目 JSON</label>
+        <textarea name="items_json" rows="6" style="width:100%;font-family:var(--font-mono,monospace);font-size:.75rem" placeholder='[{"name":"石膏板平面吊顶","unit":"㎡","factor":1.0,"price":212,"category":"木工"}]'></textarea>
+      </div>
+      <button type="submit" class="btn">添加预设</button>
+    </form>
+  </details>
+  {% endif %}
+</div>
+
+{% for p in presets %}
+<div class="card" style="margin-bottom:16px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <h3 style="font-size:1rem;color:var(--color-text-primary)">
+      {{ p.name }}
+      <span style="color:var(--color-text-tertiary);font-size:.8125rem;font-weight:400;margin-left:8px">{{ p.space_type }} · {{ p.parsed_items | length }} 项</span>
+    </h3>
+    {% if user.role == 'admin' %}
+    <form method="post" action="/app/catalog/presets/{{ p.id }}/delete" style="display:inline" onsubmit="return confirm('确认删除预设「{{ p.name }}」？')">
+      <button type="submit" style="background:none;border:none;color:var(--color-error);cursor:pointer;font-size:.75rem">删除</button>
+    </form>
+    {% endif %}
+  </div>
+  <table>
+    <thead><tr><th>项目</th><th>单位</th><th>单价</th><th>系数/定量</th><th>分类</th></tr></thead>
+    <tbody>
+      {% for it in p.parsed_items %}
+      <tr>
+        <td>{{ it.name }}</td>
+        <td>{{ it.unit }}</td>
+        <td>¥{{ '{:,.2f}'.format(it.price or 0) }}</td>
+        <td>
+          {% if it.factor %}系数 {{ it.factor }}{% elif it.fixed %}定量 {{ it.fixed }}{% elif it.manualQty %}手动{% else %}—{% endif %}
+        </td>
+        <td>{{ it.category or '—' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" style="color:var(--color-text-tertiary);text-align:center">无项目</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card" style="text-align:center;padding:32px;color:var(--color-text-tertiary)">暂无空间预设</div>
+{% endfor %}
+
+{% endif %}
+
+<script>
+function editItem(id) {
+  document.getElementById('cat-row-' + id).style.display = 'none';
+  document.getElementById('cat-edit-' + id).style.display = 'table-row';
+}
+function cancelEdit(id) {
+  document.getElementById('cat-edit-' + id).style.display = 'none';
+  document.getElementById('cat-row-' + id).style.display = 'table-row';
+}
+</script>
+{% endblock %}

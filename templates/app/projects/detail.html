@@ -27,14 +27,78 @@
 {% if tab == 'overview' %}
 <div class="card">
   <h3 style="margin-bottom:16px">项目信息</h3>
-  <p><strong>行业：</strong>{{ project.industry or '—' }}</p>
-  <p><strong>面积：</strong>{{ project.area or '—' }} ㎡</p>
-  <p><strong>预算：</strong>
-    {% if project.budget_min %}¥{{ '{:,.0f}'.format(project.budget_min) }}{% endif %}
-    {% if project.budget_max %} — ¥{{ '{:,.0f}'.format(project.budget_max) }}{% endif %}
-    {% if not project.budget_min and not project.budget_max %}—{% endif %}
-  </p>
-  <p><strong>开始：</strong>{{ project.start_date or '—' }} · <strong>截止：</strong>{{ project.deadline or '—' }}</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;font-size:.875rem;margin-bottom:20px">
+    <div><span style="color:var(--color-text-secondary)">行业：</span>{{ project.industry or '—' }}</div>
+    <div><span style="color:var(--color-text-secondary)">面积：</span>{{ project.area or '—' }} ㎡</div>
+    <div><span style="color:var(--color-text-secondary)">预算：</span>
+      {% if project.budget_min %}¥{{ '{:,.0f}'.format(project.budget_min) }}{% endif %}
+      {% if project.budget_min and project.budget_max %} — {% endif %}
+      {% if project.budget_max %}¥{{ '{:,.0f}'.format(project.budget_max) }}{% endif %}
+      {% if not project.budget_min and not project.budget_max %}—{% endif %}
+    </div>
+    <div><span style="color:var(--color-text-secondary)">开始：</span>{{ project.start_date or '—' }}</div>
+    <div><span style="color:var(--color-text-secondary)">截止：</span>{{ project.deadline or '—' }}</div>
+    <div><span style="color:var(--color-text-secondary)">客户：</span>{{ project.client_name or '—' }}</div>
+  </div>
+
+  {% if user.role == 'admin' %}
+  <details>
+    <summary style="cursor:pointer;font-weight:600;padding:8px 0;color:var(--color-accent)">编辑项目信息</summary>
+    <form method="post" action="/app/projects/{{ project.id }}/edit" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-top:12px;align-items:end">
+      <input type="hidden" name="redirect" value="/app/projects/{{ project.id }}?tab=overview">
+      <div class="form-group" style="margin:0">
+        <label>项目名称</label>
+        <input type="text" name="name" value="{{ project.name }}" style="width:100%">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>状态</label>
+        <select name="status">
+          {% for key, label in status_labels.items() %}
+          <option value="{{ key }}" {% if project.status == key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>客户</label>
+        <select name="client_id">
+          <option value="0">— 无 —</option>
+          {% for c in clients %}
+          <option value="{{ c.id }}" {% if project.client_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>行业</label>
+        <select name="industry">
+          {% for ind in ['餐饮', '零售', '美陈', '快闪', '其他'] %}
+          <option value="{{ ind }}" {% if project.industry == ind %}selected{% endif %}>{{ ind }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>面积 (㎡)</label>
+        <input type="number" name="area" step="0.1" value="{{ project.area or 0 }}">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>预算下限</label>
+        <input type="number" name="budget_min" step="1000" value="{{ project.budget_min or '' }}">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>预算上限</label>
+        <input type="number" name="budget_max" step="1000" value="{{ project.budget_max or '' }}">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>开始日期</label>
+        <input type="date" name="start_date" value="{{ project.start_date or '' }}">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>截止日期</label>
+        <input type="date" name="deadline" value="{{ project.deadline or '' }}">
+      </div>
+      <button type="submit" class="btn">保存</button>
+    </form>
+  </details>
+  {% endif %}
 </div>
 {% if milestones %}
 <div class="card">
@@ -66,34 +130,394 @@
 </div>
 
 {% elif tab == 'quote' %}
+{# ── 新建报价 ── #}
 <div class="card">
   <h3 style="margin-bottom:16px">新建报价</h3>
-  <form method="post" action="/app/projects/{{ project.id }}/quote/new" style="display:flex;gap:12px;align-items:end">
-    <div class="form-group" style="margin:0;flex:1">
-      <label>选择 BOQ 模板</label>
-      <select name="template_id" required>
-        {% for t in boq_templates %}
-        <option value="{{ t.id }}">{{ t.name }} ({{ t.project_type }})</option>
-        {% endfor %}
-      </select>
-    </div>
-    <button type="submit" class="btn">创建报价</button>
-  </form>
+  <div style="display:flex;gap:24px;flex-wrap:wrap">
+    <form method="post" action="/app/projects/{{ project.id }}/quote/new-space" style="flex:1;min-width:240px">
+      <div style="border:1px solid var(--color-border);border-radius:var(--radius-md);padding:16px">
+        <h4 style="margin-bottom:8px;color:var(--color-accent)">空间分区报价</h4>
+        <p style="font-size:.8125rem;color:var(--color-text-secondary);margin-bottom:12px">按空间分区录入，自动算量，实时计算</p>
+        <button type="submit" class="btn" style="width:100%">创建空间报价</button>
+      </div>
+    </form>
+    <form method="post" action="/app/projects/{{ project.id }}/quote/new" style="flex:1;min-width:240px">
+      <div style="border:1px solid var(--color-border);border-radius:var(--radius-md);padding:16px">
+        <h4 style="margin-bottom:8px">BOQ 模板报价</h4>
+        <p style="font-size:.8125rem;color:var(--color-text-secondary);margin-bottom:12px">基于预设模板，手动填写数量</p>
+        <select name="template_id" required style="width:100%;margin-bottom:8px">
+          {% for t in boq_templates %}
+          <option value="{{ t.id }}">{{ t.name }} ({{ t.project_type }})</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-outline" style="width:100%">创建模板报价</button>
+      </div>
+    </form>
+  </div>
 </div>
 
-{% set active_quote_id = request.query_params.get('quote_id') %}
-
 {% if active_quote %}
+{% set is_space_mode = active_quote.parsed_detail.get('mode') == 'spaces' %}
+
 <div class="card">
-    <div class="card-header" style="padding:0;margin-bottom:16px">
-    <h3 class="card-title">报价 v{{ active_quote.version }} · {{ active_quote.template_name or '' }}</h3>
+  <div class="card-header" style="padding:0;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+    <h3 class="card-title">报价 v{{ active_quote.version }}
+      {% if is_space_mode %}<span class="badge" style="margin-left:8px">空间分区</span>{% else %}<span class="badge" style="margin-left:8px">BOQ模板</span>{% endif %}
+    </h3>
     <div class="page-actions">
+      <a href="/app/projects/{{ project.id }}/quote/{{ active_quote.id }}/preview" target="_blank" class="btn" style="padding:6px 14px;font-size:.8rem">预览/打印</a>
       <span style="font-size:.8rem;color:var(--color-text-secondary)">导出：</span>
       <a href="/app/projects/{{ project.id }}/quote/{{ active_quote.id }}/pdf" class="btn btn-outline" style="padding:6px 14px;font-size:.8rem">PDF</a>
       <a href="/app/projects/{{ project.id }}/quote/{{ active_quote.id }}/excel" class="btn btn-outline" style="padding:6px 14px;font-size:.8rem">Excel</a>
       <a href="/app/projects/{{ project.id }}/quote/{{ active_quote.id }}/word" class="btn btn-outline" style="padding:6px 14px;font-size:.8rem">Word</a>
     </div>
   </div>
+
+{% if is_space_mode %}
+{# ───── 空间分区报价编辑器 ───── #}
+<form method="post" action="/app/projects/{{ project.id }}/quote/{{ active_quote.id }}/update-space" id="spaceQuoteForm">
+  <input type="hidden" name="spaces_json" id="spacesJson" value='{{ active_quote.parsed_detail | tojson }}'>
+
+  {# 工具栏 #}
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+    <select id="presetSelect" style="min-width:120px">
+      <option value="">— 选择空间预设 —</option>
+    </select>
+    <button type="button" class="btn btn-outline" onclick="addSpaceFromPreset()">+ 添加空间(预设)</button>
+    <button type="button" class="btn btn-outline" onclick="addBlankSpace()">+ 空白空间</button>
+    <select id="catalogSelect" style="min-width:200px;margin-left:auto">
+      <option value="">— 浏览单价目录 —</option>
+    </select>
+  </div>
+
+  {# 空间列表容器 #}
+  <div id="spacesContainer"></div>
+
+  {# 费率设置 + 汇总 #}
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px">
+    <div>
+      <h4 style="margin-bottom:12px">费率设置</h4>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="form-group" style="margin:0">
+          <label>设计费 %</label>
+          <input type="number" id="rateDesign" value="{{ active_quote.design_fee_pct }}" step="0.1" style="width:80px" oninput="recalc()">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>管理费 %</label>
+          <input type="number" id="rateMgmt" value="{{ active_quote.management_fee_pct }}" step="0.1" style="width:80px" oninput="recalc()">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>税 %</label>
+          <input type="number" id="rateTax" value="{{ active_quote.tax_pct }}" step="0.1" style="width:80px" oninput="recalc()">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>利润 %</label>
+          <input type="number" id="rateMargin" value="{{ active_quote.margin_pct }}" step="0.1" style="width:80px" oninput="recalc()">
+        </div>
+      </div>
+    </div>
+    <div id="summaryBox" style="background:var(--color-elevated);border-radius:var(--radius-md);padding:16px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--color-text-secondary)">直接成本</span><span id="sumDirect">¥0</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--color-text-secondary)">设计费</span><span id="sumDesign">¥0</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--color-text-secondary)">管理费</span><span id="sumMgmt">¥0</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--color-text-secondary)">税</span><span id="sumTax">¥0</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--color-text-secondary)">利润</span><span id="sumMargin">¥0</span></div>
+      <div style="border-top:1px solid var(--color-border);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-weight:600">总计</span>
+        <span id="sumTotal" style="font-size:1.25rem;font-weight:700;color:var(--color-accent)">¥0</span>
+      </div>
+    </div>
+  </div>
+
+  <button type="submit" class="btn" style="margin-top:16px" onclick="return serializeBeforeSubmit()">保存报价</button>
+</form>
+
+<script>
+// ─── 数据模型 ───
+let spaces = [];
+let catalogData = { categories: [], items: {} };
+let presetData = [];
+
+// 初始化：从隐藏字段加载数据
+try {
+  const parsed = JSON.parse(document.getElementById('spacesJson').value);
+  spaces = parsed.spaces || [];
+} catch(e) { spaces = []; }
+
+// ─── 获取目录和预设 ───
+async function loadCatalogAndPresets() {
+  const [catRes, preRes] = await Promise.all([
+    fetch('/app/catalog/api/items'),
+    fetch('/app/catalog/api/presets')
+  ]);
+  catalogData = await catRes.json();
+  const preJson = await preRes.json();
+  presetData = preJson.presets || [];
+
+  // 填充预设下拉
+  const ps = document.getElementById('presetSelect');
+  presetData.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.name + ' (' + p.items.length + '项)';
+    ps.appendChild(opt);
+  });
+
+  // 填充目录下拉
+  const cs = document.getElementById('catalogSelect');
+  catalogData.categories.forEach(cat => {
+    const og = document.createElement('optgroup');
+    og.label = cat;
+    (catalogData.items[cat] || []).forEach(it => {
+      const opt = document.createElement('option');
+      opt.value = it.id;
+      opt.textContent = it.name + ' · ¥' + it.price + '/' + it.unit;
+      og.appendChild(opt);
+    });
+    cs.appendChild(og);
+  });
+
+  renderSpaces();
+  recalc();
+}
+
+// ─── 渲染空间列表 ───
+function renderSpaces() {
+  const container = document.getElementById('spacesContainer');
+  container.innerHTML = '';
+
+  if (spaces.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:32px;color:var(--color-text-tertiary);border:1px dashed var(--color-border);border-radius:var(--radius-md)">点击上方按钮添加空间</div>';
+    return;
+  }
+
+  spaces.forEach((space, si) => {
+    const div = document.createElement('div');
+    div.style.cssText = 'border:1px solid var(--color-border);border-radius:var(--radius-md);padding:16px;margin-bottom:16px';
+
+    let html = '<div style="display:flex;gap:12px;align-items:end;margin-bottom:12px;flex-wrap:wrap">';
+    html += '<div class="form-group" style="margin:0"><label>空间名称</label><input type="text" value="' + esc(space.name) + '" onchange="updateSpace(' + si + ',\'name\',this.value)" style="min-width:120px"></div>';
+    html += '<div class="form-group" style="margin:0"><label>面积 (㎡)</label><input type="number" value="' + (space.area || 0) + '" step="0.1" oninput="updateSpace(' + si + ',\'area\',parseFloat(this.value)||0)" style="width:90px"></div>';
+    html += '<div style="margin-left:auto;display:flex;gap:6px">';
+    html += '<select id="addItemSelect_' + si + '" style="min-width:180px"><option value="">+ 添加项目</option>';
+    catalogData.categories.forEach(cat => {
+      html += '<optgroup label="' + cat + '">';
+      (catalogData.items[cat] || []).forEach(it => {
+        html += '<option value="' + it.id + '" data-name="' + esc(it.name) + '" data-unit="' + esc(it.unit) + '" data-price="' + it.price + '" data-category="' + esc(it.category) + '" data-factor="' + (it.factor || '') + '">' + it.name + ' · ¥' + it.price + '/' + it.unit + '</option>';
+      });
+      html += '</optgroup>';
+    });
+    html += '</select>';
+    html += '<button type="button" class="btn btn-outline" style="padding:6px 12px;font-size:.75rem" onclick="addItemToSpace(' + si + ')">添加</button>';
+    html += '<button type="button" style="background:none;border:none;color:var(--color-error);cursor:pointer;font-size:.8125rem" onclick="removeSpace(' + si + ')">删除空间</button>';
+    html += '</div>';
+    html += '</div>';
+
+    // 项目表格
+    if (!space.items || space.items.length === 0) {
+      html += '<p style="color:var(--color-text-tertiary);font-size:.8125rem;padding:8px 0">暂无项目，从右侧下拉添加</p>';
+    } else {
+      html += '<table><thead><tr><th>项目</th><th>单位</th><th>单价</th><th>算量模式</th><th>系数/定量</th><th>数量</th><th>小计</th><th></th></tr></thead><tbody>';
+      space.items.forEach((item, ii) => {
+        const qtyMode = item.qtyMode || 'factor';
+        const qty = calcQty(item, space.area);
+        const lineTotal = qty * (item.price || 0);
+        html += '<tr>';
+        html += '<td>' + esc(item.name) + '</td>';
+        html += '<td>' + esc(item.unit) + '</td>';
+        html += '<td><input type="number" value="' + (item.price || 0) + '" step="0.01" style="width:70px" oninput="updateItem(' + si + ',' + ii + ',\'price\',parseFloat(this.value)||0)"></td>';
+        html += '<td><select onchange="updateItem(' + si + ',' + ii + ',\'qtyMode\',this.value)" style="width:90px">';
+        html += '<option value="factor"' + (qtyMode==='factor'?' selected':'') + '>面积×系数</option>';
+        html += '<option value="fixed"' + (qtyMode==='fixed'?' selected':'') + '>定量</option>';
+        html += '<option value="manual"' + (qtyMode==='manual'?' selected':'') + '>手动输入</option>';
+        html += '</select></td>';
+        html += '<td>';
+        if (qtyMode === 'factor') {
+          html += '<input type="number" value="' + (item.factor || 0) + '" step="0.01" style="width:60px" oninput="updateItem(' + si + ',' + ii + ',\'factor\',parseFloat(this.value)||0)" title="面积 × 系数 = 数量">';
+        } else if (qtyMode === 'fixed') {
+          html += '<input type="number" value="' + (item.fixed || 0) + '" step="0.01" style="width:60px" oninput="updateItem(' + si + ',' + ii + ',\'fixed\',parseFloat(this.value)||0)" title="固定数量">';
+        } else {
+          html += '<input type="number" value="' + (item.manualQty || 0) + '" step="0.01" style="width:60px" oninput="updateItem(' + si + ',' + ii + ',\'manualQty\',parseFloat(this.value)||0)" title="手动输入数量">';
+        }
+        html += '</td>';
+        html += '<td class="qty-cell" style="color:var(--color-text-tertiary)">' + qty.toFixed(2) + '</td>';
+        html += '<td class="line-total-cell" style="font-weight:500">¥' + lineTotal.toFixed(2) + '</td>';
+        html += '<td><button type="button" style="background:none;border:none;color:var(--color-error);cursor:pointer;font-size:.75rem" onclick="removeItem(' + si + ',' + ii + ')">✕</button></td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+    }
+
+    div.innerHTML = html;
+    container.appendChild(div);
+  });
+}
+
+// ─── 辅助函数 ───
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function calcQty(item, area) {
+  const mode = item.qtyMode || 'factor';
+  if (mode === 'fixed') return parseFloat(item.fixed) || 0;
+  if (mode === 'manual') return parseFloat(item.manualQty) || 0;
+  return (parseFloat(area) || 0) * (parseFloat(item.factor) || 0);
+}
+
+function fmt(n) { return '¥' + (n || 0).toLocaleString('zh-CN', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+
+// ─── 空间操作 ───
+function addSpaceFromPreset() {
+  const sel = document.getElementById('presetSelect');
+  const presetId = parseInt(sel.value);
+  if (!presetId) return;
+  const preset = presetData.find(p => p.id === presetId);
+  if (!preset) return;
+  spaces.push({
+    name: preset.name,
+    area: 0,
+    items: preset.items.map(it => ({
+      name: it.name, unit: it.unit, price: it.price,
+      factor: it.factor || null, fixed: it.fixed || null,
+      manualQty: it.manualQty || null, qtyMode: it.factor ? 'factor' : (it.fixed ? 'fixed' : 'manual'),
+      category: it.category || ''
+    }))
+  });
+  sel.value = '';
+  renderSpaces();
+  recalc();
+}
+
+function addBlankSpace() {
+  spaces.push({ name: '新空间', area: 0, items: [] });
+  renderSpaces();
+  recalc();
+}
+
+function removeSpace(si) {
+  if (!confirm('确认删除此空间？')) return;
+  spaces.splice(si, 1);
+  renderSpaces();
+  recalc();
+}
+
+function updateSpace(si, field, val) {
+  spaces[si][field] = val;
+  if (field === 'area') recalc();
+}
+
+// ─── 项目操作 ───
+function addItemToSpace(si) {
+  const sel = document.getElementById('addItemSelect_' + si);
+  if (!sel || !sel.value) return;
+  const opt = sel.selectedOptions[0];
+  spaces[si].items.push({
+    name: opt.dataset.name,
+    unit: opt.dataset.unit,
+    price: parseFloat(opt.dataset.price),
+    factor: opt.dataset.factor ? parseFloat(opt.dataset.factor) : 1.0,
+    fixed: null, manualQty: null,
+    qtyMode: 'factor',
+    category: opt.dataset.category
+  });
+  sel.value = '';
+  renderSpaces();
+  recalc();
+}
+
+function removeItem(si, ii) {
+  spaces[si].items.splice(ii, 1);
+  renderSpaces();
+  recalc();
+}
+
+function updateItem(si, ii, field, val) {
+  spaces[si].items[ii][field] = val;
+  // 轻量更新 — 不重新渲染整个表格
+  recalc();
+}
+
+// ─── 实时计算 ───
+function recalc() {
+  let directCost = 0;
+  spaces.forEach(space => {
+    space.items.forEach(item => {
+      const qty = calcQty(item, space.area);
+      item.quantity = qty;
+      item.lineTotal = qty * (item.price || 0);
+      directCost += item.lineTotal;
+    });
+  });
+
+  // 更新表格中的数量和小计
+  const tables = document.querySelectorAll('#spacesContainer table');
+  tables.forEach((table, si) => {
+    if (!spaces[si]) return;
+    table.querySelectorAll('tbody tr').forEach((tr, ii) => {
+      if (!spaces[si].items[ii]) return;
+      const item = spaces[si].items[ii];
+      const qty = calcQty(item, spaces[si].area);
+      const lineTotal = qty * (item.price || 0);
+      const qtyCell = tr.querySelector('.qty-cell');
+      const ltCell = tr.querySelector('.line-total-cell');
+      if (qtyCell) qtyCell.textContent = qty.toFixed(2);
+      if (ltCell) ltCell.textContent = fmt(lineTotal);
+    });
+  });
+
+  // 费率
+  const dPct = parseFloat(document.getElementById('rateDesign').value) || 0;
+  const mPct = parseFloat(document.getElementById('rateMgmt').value) || 0;
+  const tPct = parseFloat(document.getElementById('rateTax').value) || 0;
+  const mgPct = parseFloat(document.getElementById('rateMargin').value) || 0;
+
+  const design = directCost * dPct / 100;
+  const subtotal = directCost + design;
+  const mgmt = subtotal * mPct / 100;
+  const beforeTax = subtotal + mgmt;
+  const tax = beforeTax * tPct / 100;
+  const beforeMargin = beforeTax + tax;
+  const margin = beforeMargin * mgPct / 100;
+  const total = beforeMargin + margin;
+
+  document.getElementById('sumDirect').textContent = fmt(directCost);
+  document.getElementById('sumDesign').textContent = fmt(design);
+  document.getElementById('sumMgmt').textContent = fmt(mgmt);
+  document.getElementById('sumTax').textContent = fmt(tax);
+  document.getElementById('sumMargin').textContent = fmt(margin);
+  document.getElementById('sumTotal').textContent = fmt(total);
+}
+
+// ─── 提交前序列化 ───
+function serializeBeforeSubmit() {
+  // 更新费率到隐藏字段
+  const data = { mode: 'spaces', spaces: spaces };
+  document.getElementById('spacesJson').value = JSON.stringify(data);
+  // 设置费率隐藏字段 — 用 name 属性
+  const form = document.getElementById('spaceQuoteForm');
+  // 添加或更新费率字段
+  ['design_fee_pct', 'management_fee_pct', 'tax_pct', 'margin_pct'].forEach((name, i) => {
+    let input = form.querySelector('input[name="' + name + '"]');
+    if (!input) {
+      input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = name;
+      form.appendChild(input);
+    }
+    const ids = ['rateDesign', 'rateMgmt', 'rateTax', 'rateMargin'];
+    input.value = document.getElementById(ids[i]).value;
+  });
+  return true;
+}
+
+// 启动
+loadCatalogAndPresets();
+</script>
+
+{% else %}
+{# ───── 传统 BOQ 模板报价编辑器 ───── #}
   <form method="post" action="/app/projects/{{ project.id }}/quote/{{ active_quote.id }}/update">
     {% for group in active_quote.parsed_detail.groups %}
     {% set gi = loop.index0 %}
@@ -123,6 +547,8 @@
     </div>
     <button type="submit" class="btn" style="margin-top:16px">重新计算并保存</button>
   </form>
+{% endif %}
+
 </div>
 {% elif quotes %}
 <p style="color:var(--muted)">点击上方创建第一个报价</p>
@@ -175,20 +601,84 @@
 {% endif %}
 
 {% elif tab == 'finance' and show_finance %}
+{# ── 收款汇总 ── #}
+{% set ns = namespace(total=0, paid=0, unpaid=0) %}
+{% for inv in invoices %}
+  {% set ns.total = ns.total + (inv.amount or 0) %}
+  {% if inv.paid %}{% set ns.paid = ns.paid + (inv.amount or 0) %}
+  {% else %}{% set ns.unpaid = ns.unpaid + (inv.amount or 0) %}{% endif %}
+{% endfor %}
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px">
+  <div class="card" style="text-align:center;padding:20px">
+    <div style="font-size:.75rem;color:var(--color-text-tertiary)">总金额</div>
+    <div style="font-size:1.5rem;font-weight:700;margin-top:4px">¥{{ '{:,.0f}'.format(ns.total) }}</div>
+  </div>
+  <div class="card" style="text-align:center;padding:20px">
+    <div style="font-size:.75rem;color:var(--color-text-tertiary)">已收</div>
+    <div style="font-size:1.5rem;font-weight:700;margin-top:4px;color:#34C759">¥{{ '{:,.0f}'.format(ns.paid) }}</div>
+  </div>
+  <div class="card" style="text-align:center;padding:20px">
+    <div style="font-size:.75rem;color:var(--color-text-tertiary)">待收</div>
+    <div style="font-size:1.5rem;font-weight:700;margin-top:4px;color:#F5A623">¥{{ '{:,.0f}'.format(ns.unpaid) }}</div>
+  </div>
+</div>
+
+{# ── 添加发票 ── #}
+<div class="card">
+  <details>
+    <summary style="cursor:pointer;font-weight:600;padding:8px 0;color:var(--color-accent)">+ 添加收款计划</summary>
+    <form method="post" action="/app/projects/{{ project.id }}/invoices/add" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-top:12px;align-items:end">
+      <div class="form-group" style="margin:0">
+        <label>类型</label>
+        <select name="type">
+          <option value="定金">定金</option>
+          <option value="中期">中期</option>
+          <option value="尾款">尾款</option>
+          <option value="设计费">设计费</option>
+          <option value="其他">其他</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin:0"><label>金额</label><input type="number" name="amount" step="0.01" required value="0"></div>
+      <div class="form-group" style="margin:0"><label>到期日</label><input type="date" name="due_date"></div>
+      <div class="form-group" style="margin:0"><label>发票号</label><input type="text" name="invoice_number" placeholder="可选"></div>
+      <button type="submit" class="btn">添加</button>
+    </form>
+  </details>
+</div>
+
+{# ── 发票列表 ── #}
 <div class="card">
   <h3 style="margin-bottom:16px">收款计划</h3>
   <table>
-    <thead><tr><th>类型</th><th>金额</th><th>到期</th><th>状态</th></tr></thead>
+    <thead><tr><th>类型</th><th>金额</th><th>到期</th><th>发票号</th><th>状态</th><th>操作</th></tr></thead>
     <tbody>
       {% for inv in invoices %}
       <tr>
         <td>{{ inv.type }}</td>
         <td>¥{{ '{:,.2f}'.format(inv.amount) }}</td>
         <td>{{ inv.due_date or '—' }}</td>
-        <td>{% if inv.paid %}✓ 已收{% else %}待收{% endif %}</td>
+        <td style="font-size:.8125rem;color:var(--color-text-tertiary)">{{ inv.invoice_number or '—' }}</td>
+        <td>
+          {% if inv.paid %}
+          <span style="color:#34C759;font-weight:500">✓ 已收</span>
+          {% if inv.paid_at %}<div style="font-size:.6875rem;color:var(--color-text-tertiary)">{{ inv.paid_at[:10] }}</div>{% endif %}
+          {% else %}
+          <span style="color:#F5A623">待收</span>
+          {% endif %}
+        </td>
+        <td style="white-space:nowrap">
+          <form method="post" action="/app/projects/{{ project.id }}/invoices/{{ inv.id }}/toggle" style="display:inline">
+            <button type="submit" style="background:none;border:none;color:var(--color-accent);cursor:pointer;font-size:.75rem" title="切换收款状态">
+              {% if inv.paid %}标记待收{% else %}标记已收{% endif %}
+            </button>
+          </form>
+          <form method="post" action="/app/projects/{{ project.id }}/invoices/{{ inv.id }}/delete" style="display:inline" onsubmit="return confirm('确认删除此收款记录？')">
+            <button type="submit" style="background:none;border:none;color:var(--color-error);cursor:pointer;font-size:.75rem">删除</button>
+          </form>
+        </td>
       </tr>
       {% else %}
-      <tr><td colspan="4" style="color:var(--muted)">暂无收款计划</td></tr>
+      <tr><td colspan="6" style="color:var(--color-text-tertiary);text-align:center;padding:24px">暂无收款计划</td></tr>
       {% endfor %}
     </tbody>
   </table>

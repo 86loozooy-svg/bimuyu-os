@@ -4,6 +4,18 @@ from typing import Any
 from app.database import db_session
 
 
+def _calc_item_qty(item: dict, area: float) -> float:
+    """Calculate item quantity based on qtyMode: factor / fixed / manual."""
+    mode = item.get("qtyMode", "factor")
+    if mode == "fixed":
+        return float(item.get("fixed", 0) or 0)
+    if mode == "manual":
+        return float(item.get("manualQty", 0) or 0)
+    # default: factor
+    factor = float(item.get("factor", 0) or 0)
+    return area * factor
+
+
 def calculate_quote_totals(
     json_detail: dict[str, Any],
     design_fee_pct: float,
@@ -11,14 +23,28 @@ def calculate_quote_totals(
     tax_pct: float,
     margin_pct: float,
 ) -> dict[str, float]:
+    """Calculate totals — supports both 'groups' (legacy) and 'spaces' mode."""
     direct_cost = 0.0
-    for group in json_detail.get("groups", []):
-        for item in group.get("items", []):
-            qty = float(item.get("quantity", 0) or 0)
-            unit_price = float(item.get("unit_price", 0) or 0)
-            line_total = qty * unit_price
-            item["line_total"] = line_total
-            direct_cost += line_total
+    mode = json_detail.get("mode", "groups")
+
+    if mode == "spaces":
+        for space in json_detail.get("spaces", []):
+            area = float(space.get("area", 0) or 0)
+            for item in space.get("items", []):
+                qty = _calc_item_qty(item, area)
+                price = float(item.get("price", 0) or 0)
+                line_total = qty * price
+                item["quantity"] = round(qty, 4)
+                item["line_total"] = line_total
+                direct_cost += line_total
+    else:
+        for group in json_detail.get("groups", []):
+            for item in group.get("items", []):
+                qty = float(item.get("quantity", 0) or 0)
+                unit_price = float(item.get("unit_price", 0) or 0)
+                line_total = qty * unit_price
+                item["line_total"] = line_total
+                direct_cost += line_total
 
     design_fee = direct_cost * design_fee_pct / 100
     subtotal = direct_cost + design_fee
@@ -72,6 +98,21 @@ def get_studio_defaults() -> dict[str, float]:
         }
 
 
+def _iter_sections(detail: dict):
+    """Yield (section_name, area, items) — works for both 'spaces' and 'groups' mode."""
+    mode = detail.get("mode", "groups")
+    if mode == "spaces":
+        for space in detail.get("spaces", []):
+            yield (space.get("name", ""), float(space.get("area", 0) or 0), space.get("items", []))
+    else:
+        for group in detail.get("groups", []):
+            yield (group.get("name", ""), 0, group.get("items", []))
+
+
+def _item_price(item: dict) -> float:
+    return float(item.get("price", item.get("unit_price", 0)) or 0)
+
+
 def export_quote_pdf(quote: dict, project: dict, studio: dict) -> bytes:
     import os
     from fpdf import FPDF
@@ -96,13 +137,16 @@ def export_quote_pdf(quote: dict, project: dict, studio: dict) -> bytes:
     pdf.ln(5)
 
     detail = json.loads(quote["json_detail"]) if isinstance(quote["json_detail"], str) else quote["json_detail"]
-    for group in detail.get("groups", []):
+    for sec_name, area, items in _iter_sections(detail):
         pdf.set_font(font_family, size=11)
-        pdf.cell(0, 8, group.get("name", ""), ln=True)
+        label = sec_name
+        if area:
+            label += f"  ({area:.1f}㎡)"
+        pdf.cell(0, 8, label, ln=True)
         pdf.set_font(font_family, size=10)
-        for item in group.get("items", []):
+        for item in items:
             qty = item.get("quantity", 0)
-            unit_price = item.get("unit_price", 0)
+            unit_price = _item_price(item)
             line = item.get("line_total", qty * unit_price)
             line_text = (
                 f"  {item.get('name', '')}  |  {qty} {item.get('unit', '')} "
@@ -191,10 +235,13 @@ def export_quote_excel(quote: dict, project: dict, studio: dict) -> bytes:
     # --- BOQ detail ---
     detail = json.loads(quote["json_detail"]) if isinstance(quote["json_detail"], str) else quote["json_detail"]
 
-    for group in detail.get("groups", []):
-        # Group name
+    for sec_name, area, items in _iter_sections(detail):
+        # Section name
         ws.merge_cells(f"A{row}:E{row}")
-        ws[f"A{row}"] = group.get("name", "")
+        label = sec_name
+        if area:
+            label += f"  ({area:.1f}㎡)"
+        ws[f"A{row}"] = label
         _style_group(ws[f"A{row}"])
         row += 1
 
@@ -206,9 +253,9 @@ def export_quote_excel(quote: dict, project: dict, studio: dict) -> bytes:
         row += 1
 
         # Items
-        for item in group.get("items", []):
+        for item in items:
             qty = float(item.get("quantity", 0) or 0)
-            unit_price = float(item.get("unit_price", 0) or 0)
+            unit_price = _item_price(item)
             line_total = item.get("line_total", qty * unit_price)
 
             ws.cell(row=row, column=1, value=item.get("name", ""))
@@ -224,7 +271,7 @@ def export_quote_excel(quote: dict, project: dict, studio: dict) -> bytes:
             _style_cell(ws.cell(row=row, column=5), money=True)
             row += 1
 
-        row += 1  # blank row between groups
+        row += 1  # blank row between sections
 
     # --- Summary ---
     summary_start = row
@@ -303,8 +350,11 @@ def export_quote_word(quote: dict, project: dict, studio: dict) -> bytes:
     # --- BOQ detail ---
     detail = json.loads(quote["json_detail"]) if isinstance(quote["json_detail"], str) else quote["json_detail"]
 
-    for group in detail.get("groups", []):
-        doc.add_heading(group.get("name", ""), level=2)
+    for sec_name, area, items in _iter_sections(detail):
+        heading = sec_name
+        if area:
+            heading += f"  ({area:.1f}㎡)"
+        doc.add_heading(heading, level=2)
 
         table = doc.add_table(rows=1, cols=5)
         table.style = "Light Grid Accent 1"
@@ -319,9 +369,9 @@ def export_quote_word(quote: dict, project: dict, studio: dict) -> bytes:
         hdr[4].text = "小计"
 
         # Items
-        for item in group.get("items", []):
+        for item in items:
             qty = float(item.get("quantity", 0) or 0)
-            unit_price = float(item.get("unit_price", 0) or 0)
+            unit_price = _item_price(item)
             line_total = item.get("line_total", qty * unit_price)
 
             cells = table.add_row().cells
@@ -331,7 +381,7 @@ def export_quote_word(quote: dict, project: dict, studio: dict) -> bytes:
             cells[3].text = f"{qty:g}"
             cells[4].text = f"{float(line_total):,.2f}"
 
-        doc.add_paragraph()  # spacer between groups
+        doc.add_paragraph()  # spacer between sections
 
     # --- Summary ---
     doc.add_heading("费用汇总", level=2)

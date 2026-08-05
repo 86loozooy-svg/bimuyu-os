@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ studio.name or 'Studio OS' }} — 报价单 {{ project.code }} v{{ quote.version }}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+      background: #f5f5f5;
+      color: #222;
+      line-height: 1.6;
+      padding: 20px;
+    }
+    .preview-page {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 48px 56px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.08);
+      border-radius: 4px;
+    }
+
+    /* Header */
+    .doc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 32px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #333;
+    }
+    .doc-header .studio-name {
+      font-size: 22px;
+      font-weight: 700;
+      color: #222;
+    }
+    .doc-header .studio-info {
+      font-size: 12px;
+      color: #888;
+      margin-top: 4px;
+    }
+    .doc-header .doc-title {
+      text-align: right;
+    }
+    .doc-header .doc-title h1 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+    }
+    .doc-header .doc-title .doc-meta {
+      font-size: 12px;
+      color: #888;
+      margin-top: 4px;
+    }
+
+    /* Project info */
+    .project-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 24px;
+      margin-bottom: 28px;
+      font-size: 13px;
+    }
+    .project-info .label { color: #888; }
+    .project-info .value { font-weight: 500; }
+
+    /* Section (space) */
+    .section {
+      margin-bottom: 24px;
+    }
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+      padding: 8px 12px;
+      background: #f0f0f0;
+      border-left: 3px solid #333;
+      margin-bottom: 0;
+    }
+
+    /* Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    th {
+      background: #333;
+      color: #fff;
+      padding: 8px 10px;
+      text-align: left;
+      font-weight: 500;
+    }
+    td {
+      padding: 7px 10px;
+      border-bottom: 1px solid #e5e5e5;
+    }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    tr:last-child td { border-bottom: none; }
+
+    /* Summary */
+    .summary {
+      margin-top: 28px;
+      margin-left: auto;
+      width: 320px;
+      font-size: 13px;
+    }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px dotted #ddd;
+    }
+    .summary-row.total {
+      border-top: 2px solid #333;
+      border-bottom: none;
+      padding-top: 12px;
+      margin-top: 8px;
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .summary-row .label { color: #666; }
+    .summary-row.total .label { color: #222; }
+    .summary-row .value { font-variant-numeric: tabular-nums; }
+
+    /* Footer */
+    .doc-footer {
+      margin-top: 40px;
+      padding-top: 16px;
+      border-top: 1px solid #e5e5e5;
+      font-size: 11px;
+      color: #aaa;
+      text-align: center;
+    }
+
+    /* Toolbar (screen only) */
+    .toolbar {
+      max-width: 800px;
+      margin: 0 auto 16px;
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+    .toolbar button, .toolbar a {
+      padding: 8px 20px;
+      border: 1px solid #333;
+      background: #333;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 4px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .toolbar a { background: #fff; color: #333; }
+
+    /* Print */
+    @media print {
+      body { background: #fff; padding: 0; }
+      .toolbar { display: none; }
+      .preview-page {
+        box-shadow: none;
+        border-radius: 0;
+        padding: 0;
+        max-width: 100%;
+      }
+      @page { margin: 2cm; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <a href="/app/projects/{{ project.id }}?tab=quote&quote_id={{ quote.id }}">← 返回编辑</a>
+    <button onclick="window.print()">打印 / 保存 PDF</button>
+  </div>
+
+  <div class="preview-page">
+    <!-- Header -->
+    <div class="doc-header">
+      <div>
+        <div class="studio-name">{{ studio.name or 'Studio OS' }}</div>
+        {% if studio.address %}<div class="studio-info">{{ studio.address }}</div>{% endif %}
+        {% if studio.email_signature %}<div class="studio-info">{{ studio.email_signature }}</div>{% endif %}
+      </div>
+      <div class="doc-title">
+        <h1>装修报价单</h1>
+        <div class="doc-meta">No. {{ project.code }} · v{{ quote.version }}</div>
+        <div class="doc-meta">{{ quote.created_at[:10] if quote.created_at else '' }}</div>
+      </div>
+    </div>
+
+    <!-- Project Info -->
+    <div class="project-info">
+      <div><span class="label">项目名称：</span><span class="value">{{ project.name }}</span></div>
+      <div><span class="label">客户：</span><span class="value">{{ client.name or '—' }}</span></div>
+      <div><span class="label">项目编号：</span><span class="value">{{ project.code }}</span></div>
+      <div><span class="label">行业：</span><span class="value">{{ project.industry or '—' }}</span></div>
+      {% if project.area %}<div><span class="label">面积：</span><span class="value">{{ project.area }} ㎡</span></div>{% endif %}
+      {% if client.contact_person %}<div><span class="label">联系人：</span><span class="value">{{ client.contact_person }}</span></div>{% endif %}
+      {% if client.phone %}<div><span class="label">电话：</span><span class="value">{{ client.phone }}</span></div>{% endif %}
+    </div>
+
+    <!-- Quote Detail -->
+    {% if detail.mode == 'spaces' %}
+      {% for space in detail.spaces %}
+      <div class="section">
+        <div class="section-title">{{ space['name'] }}{% if space['area'] %}（{{ space['area'] }}㎡）{% endif %}</div>
+        <table>
+          <thead>
+            <tr><th>项目</th><th>单位</th><th class="num">单价</th><th class="num">数量</th><th class="num">小计</th></tr>
+          </thead>
+          <tbody>
+            {% for item in space['items'] %}
+            <tr>
+              <td>{{ item['name'] }}</td>
+              <td>{{ item['unit'] }}</td>
+              <td class="num">¥{{ '{:,.2f}'.format(item['price'] or 0) }}</td>
+              <td class="num">{{ '{:,.2f}'.format(item['quantity'] or 0) }}</td>
+              <td class="num">¥{{ '{:,.2f}'.format(item['line_total'] or 0) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endfor %}
+    {% else %}
+      {% for group in detail.groups %}
+      <div class="section">
+        <div class="section-title">{{ group['name'] }}</div>
+        <table>
+          <thead>
+            <tr><th>项目</th><th>单位</th><th class="num">单价</th><th class="num">数量</th><th class="num">小计</th></tr>
+          </thead>
+          <tbody>
+            {% for item in group['items'] %}
+            <tr>
+              <td>{{ item['name'] }}</td>
+              <td>{{ item['unit'] }}</td>
+              <td class="num">¥{{ '{:,.2f}'.format(item['unit_price'] or 0) }}</td>
+              <td class="num">{{ '{:,.2f}'.format(item['quantity'] or 0) }}</td>
+              <td class="num">¥{{ '{:,.2f}'.format(item['line_total'] or 0) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endfor %}
+    {% endif %}
+
+    <!-- Summary -->
+    <div class="summary">
+      <div class="summary-row">
+        <span class="label">直接成本</span>
+        <span class="value">¥{{ '{:,.2f}'.format(totals.direct_cost) }}</span>
+      </div>
+      <div class="summary-row">
+        <span class="label">设计费 ({{ quote.design_fee_pct }}%)</span>
+        <span class="value">¥{{ '{:,.2f}'.format(totals.design_fee) }}</span>
+      </div>
+      <div class="summary-row">
+        <span class="label">管理费 ({{ quote.management_fee_pct }}%)</span>
+        <span class="value">¥{{ '{:,.2f}'.format(totals.management_fee) }}</span>
+      </div>
+      <div class="summary-row">
+        <span class="label">税 ({{ quote.tax_pct }}%)</span>
+        <span class="value">¥{{ '{:,.2f}'.format(totals.tax) }}</span>
+      </div>
+      <div class="summary-row">
+        <span class="label">利润 ({{ quote.margin_pct }}%)</span>
+        <span class="value">¥{{ '{:,.2f}'.format(totals.margin) }}</span>
+      </div>
+      <div class="summary-row total">
+        <span class="label">总计</span>
+        <span class="value">¥{{ '{:,.2f}'.format(totals.total) }}</span>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="doc-footer">
+      {% if studio.revision_policy %}{{ studio.revision_policy }} · {% endif %}
+      本报价有效期 30 天 · 金额含税
+    </div>
+  </div>
+</body>
+</html>
