@@ -73,44 +73,289 @@ def get_studio_defaults() -> dict[str, float]:
 
 
 def export_quote_pdf(quote: dict, project: dict, studio: dict) -> bytes:
+    import os
     from fpdf import FPDF
 
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
-    pdf.add_font("Helvetica", "", "Helvetica")
 
-    pdf.set_font("Helvetica", size=16)
+    # Load a Unicode font that supports Chinese
+    font_path = "/System/Library/Fonts/Supplemental/Arial Unicode.ttf"
+    if os.path.exists(font_path):
+        pdf.add_font("UnicodeFont", "", font_path, uni=True)
+        font_family = "UnicodeFont"
+    else:
+        font_family = "Helvetica"
+
+    pdf.set_font(font_family, size=16)
     pdf.cell(0, 10, studio.get("name", "Studio OS") or "Studio OS", ln=True)
-    pdf.set_font("Helvetica", size=12)
-    pdf.cell(0, 8, f"Project: {project.get('name', '')}", ln=True)
-    pdf.cell(0, 8, f"Quote v{quote.get('version', 1)} | Status: {quote.get('status', 'draft')}", ln=True)
+    pdf.set_font(font_family, size=12)
+    pdf.cell(0, 8, f"项目：{project.get('name', '')}", ln=True)
+    pdf.cell(0, 8, f"报价 v{quote.get('version', 1)}  ·  状态：{quote.get('status', 'draft')}", ln=True)
     pdf.ln(5)
 
     detail = json.loads(quote["json_detail"]) if isinstance(quote["json_detail"], str) else quote["json_detail"]
-    pdf.set_font("Helvetica", size=10)
     for group in detail.get("groups", []):
-        pdf.set_font("Helvetica", size=11)
+        pdf.set_font(font_family, size=11)
         pdf.cell(0, 8, group.get("name", ""), ln=True)
-        pdf.set_font("Helvetica", size=10)
+        pdf.set_font(font_family, size=10)
         for item in group.get("items", []):
             qty = item.get("quantity", 0)
             unit_price = item.get("unit_price", 0)
             line = item.get("line_total", qty * unit_price)
             line_text = (
-                f"  {item.get('name', '')} | {qty} {item.get('unit', '')} "
-                f"x {unit_price:.2f} = {line:.2f}"
+                f"  {item.get('name', '')}  |  {qty} {item.get('unit', '')} "
+                f"× {unit_price:,.2f} = ¥{line:,.2f}"
             )
             pdf.cell(0, 6, line_text, ln=True)
         pdf.ln(2)
 
     pdf.ln(5)
-    pdf.cell(0, 8, f"Direct Cost: {quote.get('direct_cost', 0):,.2f}", ln=True)
-    pdf.cell(0, 8, f"Design Fee ({quote.get('design_fee_pct')}%): included", ln=True)
-    pdf.cell(0, 8, f"Management ({quote.get('management_fee_pct')}%): included", ln=True)
-    pdf.cell(0, 8, f"Tax ({quote.get('tax_pct')}%): included", ln=True)
-    pdf.cell(0, 8, f"Margin ({quote.get('margin_pct')}%): included", ln=True)
-    pdf.set_font("Helvetica", size=12)
-    pdf.cell(0, 10, f"TOTAL: {quote.get('total', 0):,.2f} CNY", ln=True)
+    pdf.set_font(font_family, size=10)
+    pdf.cell(0, 8, f"直接成本：¥{quote.get('direct_cost', 0):,.2f}", ln=True)
+    pdf.cell(0, 8, f"设计费 ({quote.get('design_fee_pct')}%)：已含", ln=True)
+    pdf.cell(0, 8, f"管理费 ({quote.get('management_fee_pct')}%)：已含", ln=True)
+    pdf.cell(0, 8, f"税 ({quote.get('tax_pct')}%)：已含", ln=True)
+    pdf.cell(0, 8, f"利润 ({quote.get('margin_pct')}%)：已含", ln=True)
+    pdf.set_font(font_family, size=12)
+    pdf.cell(0, 10, f"总计：¥{quote.get('total', 0):,.2f}", ln=True)
 
     return pdf.output()
+
+
+# ---------------------------------------------------------------------------
+# Excel export (openpyxl)
+# ---------------------------------------------------------------------------
+def export_quote_excel(quote: dict, project: dict, studio: dict) -> bytes:
+    import io
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "报价单"
+
+    # --- Styles ---
+    thin = Side(style="thin", color="CCCCCC")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    header_fill = PatternFill(start_color="3B332A", end_color="3B332A", fill_type="solid")
+    group_fill = PatternFill(start_color="F0EBE3", end_color="F0EBE3", fill_type="solid")
+    money_fmt = '#,##0.00'
+
+    def _style_header(cell):
+        cell.font = Font(bold=True, color="FFFFFF", size=11)
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = border
+
+    def _style_group(cell):
+        cell.font = Font(bold=True, size=11)
+        cell.fill = group_fill
+        cell.border = border
+
+    def _style_cell(cell, money=False, bold=False):
+        cell.border = border
+        if money:
+            cell.number_format = money_fmt
+            cell.alignment = Alignment(horizontal="right")
+        if bold:
+            cell.font = Font(bold=True)
+
+    # --- Title block ---
+    ws.merge_cells("A1:E1")
+    ws["A1"] = studio.get("name", "Studio OS") or "Studio OS"
+    ws["A1"].font = Font(bold=True, size=16)
+    ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[1].height = 30
+
+    ws.merge_cells("A2:E2")
+    ws["A2"] = f"项目：{project.get('name', '')}  ·  编号：{project.get('code', '')}"
+    ws["A2"].font = Font(size=11)
+
+    ws.merge_cells("A3:E3")
+    ws["A3"] = (
+        f"报价 v{quote.get('version', 1)}  ·  状态：{quote.get('status', 'draft')}"
+    )
+    ws["A3"].font = Font(size=10, color="888888")
+
+    ws.merge_cells("A4:E4")
+    ws["A4"] = (
+        f"客户：{project.get('client_name', '—')}  ·  "
+        f"日期：{quote.get('created_at', '')}"
+    )
+    ws["A4"].font = Font(size=10, color="888888")
+
+    row = 6  # leave a blank row
+
+    # --- BOQ detail ---
+    detail = json.loads(quote["json_detail"]) if isinstance(quote["json_detail"], str) else quote["json_detail"]
+
+    for group in detail.get("groups", []):
+        # Group name
+        ws.merge_cells(f"A{row}:E{row}")
+        ws[f"A{row}"] = group.get("name", "")
+        _style_group(ws[f"A{row}"])
+        row += 1
+
+        # Column headers
+        headers = ["项目", "单位", "单价", "数量", "小计"]
+        for col_idx, header in enumerate(headers, 1):
+            cell = ws.cell(row=row, column=col_idx, value=header)
+            _style_header(cell)
+        row += 1
+
+        # Items
+        for item in group.get("items", []):
+            qty = float(item.get("quantity", 0) or 0)
+            unit_price = float(item.get("unit_price", 0) or 0)
+            line_total = item.get("line_total", qty * unit_price)
+
+            ws.cell(row=row, column=1, value=item.get("name", ""))
+            ws.cell(row=row, column=2, value=item.get("unit", ""))
+            ws.cell(row=row, column=3, value=unit_price)
+            ws.cell(row=row, column=4, value=qty)
+            ws.cell(row=row, column=5, value=float(line_total))
+
+            _style_cell(ws.cell(row=row, column=1))
+            _style_cell(ws.cell(row=row, column=2))
+            _style_cell(ws.cell(row=row, column=3), money=True)
+            _style_cell(ws.cell(row=row, column=4), money=True)
+            _style_cell(ws.cell(row=row, column=5), money=True)
+            row += 1
+
+        row += 1  # blank row between groups
+
+    # --- Summary ---
+    summary_start = row
+    summaries = [
+        ("直接成本", float(quote.get("direct_cost", 0) or 0)),
+        (f"设计费 ({quote.get('design_fee_pct', 0)}%)", "含"),
+        (f"管理费 ({quote.get('management_fee_pct', 0)}%)", "含"),
+        (f"税 ({quote.get('tax_pct', 0)}%)", "含"),
+        (f"利润 ({quote.get('margin_pct', 0)}%)", "含"),
+        ("总计", float(quote.get("total", 0) or 0)),
+    ]
+    for label, value in summaries:
+        ws.merge_cells(f"A{row}:D{row}")
+        ws[f"A{row}"] = label
+        ws[f"A{row}"].alignment = Alignment(horizontal="right")
+        _style_cell(ws[f"A{row}"], bold=(label == "总计"))
+        cell = ws.cell(row=row, column=5, value=value)
+        if isinstance(value, (int, float)):
+            _style_cell(cell, money=True, bold=(label == "总计"))
+        else:
+            _style_cell(cell, bold=(label == "总计"))
+        row += 1
+
+    # --- Column widths ---
+    ws.column_dimensions["A"].width = 36
+    ws.column_dimensions["B"].width = 10
+    ws.column_dimensions["C"].width = 14
+    ws.column_dimensions["D"].width = 12
+    ws.column_dimensions["E"].width = 16
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+# ---------------------------------------------------------------------------
+# Word export (python-docx)
+# ---------------------------------------------------------------------------
+def export_quote_word(quote: dict, project: dict, studio: dict) -> bytes:
+    import io
+    from docx import Document
+    from docx.shared import Cm, Pt, RGBColor
+    from docx.enum.table import WD_TABLE_ALIGNMENT
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+    doc = Document()
+
+    # --- Title ---
+    title = doc.add_heading(studio.get("name", "Studio OS") or "Studio OS", level=0)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    # --- Subtitle ---
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = p.add_run(f"项目：{project.get('name', '')}  ·  {project.get('code', '')}")
+    run.font.size = Pt(12)
+
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = p.add_run(
+        f"报价 v{quote.get('version', 1)}  ·  状态：{quote.get('status', 'draft')}"
+    )
+    run.font.size = Pt(10)
+    run.font.color.rgb = RGBColor(0x88, 0x88, 0x88)
+
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = p.add_run(
+        f"客户：{project.get('client_name', '—')}  ·  日期：{quote.get('created_at', '')}"
+    )
+    run.font.size = Pt(10)
+    run.font.color.rgb = RGBColor(0x88, 0x88, 0x88)
+
+    doc.add_paragraph()  # spacer
+
+    # --- BOQ detail ---
+    detail = json.loads(quote["json_detail"]) if isinstance(quote["json_detail"], str) else quote["json_detail"]
+
+    for group in detail.get("groups", []):
+        doc.add_heading(group.get("name", ""), level=2)
+
+        table = doc.add_table(rows=1, cols=5)
+        table.style = "Light Grid Accent 1"
+        table.alignment = WD_TABLE_ALIGNMENT.CENTER
+
+        # Header row
+        hdr = table.rows[0].cells
+        hdr[0].text = "项目"
+        hdr[1].text = "单位"
+        hdr[2].text = "单价"
+        hdr[3].text = "数量"
+        hdr[4].text = "小计"
+
+        # Items
+        for item in group.get("items", []):
+            qty = float(item.get("quantity", 0) or 0)
+            unit_price = float(item.get("unit_price", 0) or 0)
+            line_total = item.get("line_total", qty * unit_price)
+
+            cells = table.add_row().cells
+            cells[0].text = item.get("name", "")
+            cells[1].text = item.get("unit", "")
+            cells[2].text = f"{unit_price:,.2f}"
+            cells[3].text = f"{qty:g}"
+            cells[4].text = f"{float(line_total):,.2f}"
+
+        doc.add_paragraph()  # spacer between groups
+
+    # --- Summary ---
+    doc.add_heading("费用汇总", level=2)
+    summary_lines = [
+        ("直接成本", f"¥{float(quote.get('direct_cost', 0) or 0):,.2f}"),
+        (f"设计费 ({quote.get('design_fee_pct', 0)}%)", "已含"),
+        (f"管理费 ({quote.get('management_fee_pct', 0)}%)", "已含"),
+        (f"税 ({quote.get('tax_pct', 0)}%)", "已含"),
+        (f"利润 ({quote.get('margin_pct', 0)}%)", "已含"),
+    ]
+    for label, value in summary_lines:
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        p.add_run(f"{label}：").bold = True
+        p.add_run(f"  {value}")
+
+    # Total line
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    run = p.add_run(f"总计：¥{float(quote.get('total', 0) or 0):,.2f}")
+    run.bold = True
+    run.font.size = Pt(14)
+    run.font.color.rgb = RGBColor(0x3B, 0x33, 0x2A)
+
+    buf = io.BytesIO()
+    doc.save(buf)
+    return buf.getvalue()

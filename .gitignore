@@ -28,3 +28,4 @@ Thumbs.db
 # Uploads (keep dir, ignore files)
 static/uploads/*
 !static/uploads/.gitkeep
+data/studio.db

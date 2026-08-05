@@ -3,18 +3,112 @@
 {% block content %}
 <div class="app-header">
   <h1>线索看板</h1>
+  <span style="color:var(--muted);font-size:.875rem">拖拽卡片即可更新项目阶段</span>
 </div>
 <div class="pipeline-board">
   {% for status, items in board.items() %}
-  <div class="pipeline-col">
-    <h4>{{ status_labels.get(status, status) }} ({{ items|length }})</h4>
+  <div class="pipeline-col" data-status="{{ status }}"
+       ondragover="onDragOver(event, this)"
+       ondragleave="onDragLeave(this)"
+       ondrop="onDrop(event, this, '{{ status }}')">
+    <h4>{{ status_labels.get(status, status) }} <span class="pipeline-count">{{ items|length }}</span></h4>
     {% for p in items %}
-    <div class="pipeline-item">
+    <div class="pipeline-item" draggable="true"
+         ondragstart="onDragStart(event, {{ p.id }})"
+         ondragend="onDragEnd(this)">
       <a href="/app/projects/{{ p.id }}"><strong>{{ p.name }}</strong></a>
-      <div style="color:var(--muted);font-size:.75rem;margin-top:4px">{{ p.code }}</div>
+      <div style="color:var(--muted);font-size:.75rem;margin-top:4px">{{ p.code }}{% if p.deadline %} · {{ p.deadline }}{% endif %}</div>
     </div>
+    {% else %}
+    <div class="pipeline-empty" style="color:var(--muted);font-size:.75rem;padding:12px 0;text-align:center">—</div>
     {% endfor %}
   </div>
   {% endfor %}
 </div>
+
+<style>
+.pipeline-item { cursor: grab; }
+.pipeline-item:active { cursor: grabbing; }
+.pipeline-item.dragging { opacity: 0.4; }
+.pipeline-col.drag-over {
+  background: rgba(59, 51, 42, 0.08);
+  border: 2px dashed var(--accent, #3b332a);
+}
+.pipeline-count {
+  display: inline-block;
+  background: var(--border, #ddd);
+  color: var(--text, #333);
+  border-radius: 10px;
+  padding: 0 8px;
+  font-size: .75rem;
+  margin-left: 4px;
+}
+</style>
+
+<script>
+function onDragStart(e, projectId) {
+  e.dataTransfer.setData('text/plain', projectId);
+  e.currentTarget.classList.add('dragging');
+}
+
+function onDragEnd(el) {
+  el.classList.remove('dragging');
+}
+
+function onDragOver(e, col) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  col.classList.add('drag-over');
+}
+
+function onDragLeave(col) {
+  col.classList.remove('drag-over');
+}
+
+function onDrop(e, col, newStatus) {
+  e.preventDefault();
+  col.classList.remove('drag-over');
+  const projectId = e.dataTransfer.getData('text/plain');
+  if (!projectId) return;
+
+  const fd = new FormData();
+  fd.append('status', newStatus);
+
+  fetch('/app/pipeline/' + projectId + '/move', { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok) {
+        // Move the card DOM to the new column
+        const card = document.querySelector('.pipeline-item.dragging')
+          || document.querySelector(`[ondragstart="onDragStart(event, ${projectId})"]`);
+        if (card) {
+          const emptyMsg = col.querySelector('.pipeline-empty');
+          if (emptyMsg) emptyMsg.remove();
+          col.appendChild(card);
+          card.classList.remove('dragging');
+          // Update count
+          const countEl = col.querySelector('.pipeline-count');
+          if (countEl) countEl.textContent = col.querySelectorAll('.pipeline-item').length;
+        }
+        // Re-render counts in all columns
+        document.querySelectorAll('.pipeline-col').forEach(c => {
+          const cnt = c.querySelectorAll('.pipeline-item').length;
+          const ce = c.querySelector('.pipeline-count');
+          if (ce) ce.textContent = cnt;
+          // Add empty placeholder if 0 items
+          if (cnt === 0 && !c.querySelector('.pipeline-empty')) {
+            const div = document.createElement('div');
+            div.className = 'pipeline-empty';
+            div.style.cssText = 'color:var(--muted);font-size:.75rem;padding:12px 0;text-align:center';
+            div.textContent = '—';
+            c.querySelector('h4').after(div);
+          }
+        });
+      } else {
+        alert('移动失败: ' + (data.error || '未知错误'));
+      }
+    })
+    .catch(() => alert('网络错误，请重试'));
+}
+</script>
 {% endblock %}

@@ -27,6 +27,37 @@
   </div>
 </div>
 
+{# ── Charts row ── #}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+  <div class="card">
+    <h3 style="margin-bottom:16px">项目状态分布</h3>
+    <div style="position:relative;height:260px">
+      <canvas id="statusChart"></canvas>
+    </div>
+  </div>
+  <div class="card">
+    <h3 style="margin-bottom:16px">快捷入口</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <a href="/app/projects" class="stat-card" style="text-decoration:none;display:block">
+        <div class="value" style="font-size:1.5rem">📋</div>
+        <div class="label">项目列表</div>
+      </a>
+      <a href="/app/pipeline" class="stat-card" style="text-decoration:none;display:block">
+        <div class="value" style="font-size:1.5rem">🔄</div>
+        <div class="label">线索看板</div>
+      </a>
+      <a href="/app/library" class="stat-card" style="text-decoration:none;display:block">
+        <div class="value" style="font-size:1.5rem">📚</div>
+        <div class="label">资料库</div>
+      </a>
+      <a href="/app/settings" class="stat-card" style="text-decoration:none;display:block">
+        <div class="value" style="font-size:1.5rem">⚙️</div>
+        <div class="label">系统设置</div>
+      </a>
+    </div>
+  </div>
+</div>
+
 <div class="card">
   <h3 style="margin-bottom:16px">项目进度</h3>
   {% if projects %}
@@ -68,4 +99,41 @@
   </table>
 </div>
 {% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+{% if status_dist %}
+const statusLabels = {{ status_labels | tojson }};
+const statusDist = {{ status_dist | tojson }};
+const statusKeys = Object.keys(statusDist);
+const statusColors = {
+  lead: '#95a5a6', brief: '#3498db', quoting: '#f39c12', signed: '#2ecc71',
+  designing: '#9b59b6', delivering: '#e74c3c', done: '#1abc9c'
+};
+const ctx = document.getElementById('statusChart');
+if (ctx && statusKeys.some(k => statusDist[k] > 0)) {
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: statusKeys.map(k => statusLabels[k] || k),
+      datasets: [{
+        data: statusKeys.map(k => statusDist[k]),
+        backgroundColor: statusKeys.map(k => statusColors[k] || '#ccc'),
+        borderWidth: 2,
+        borderColor: '#fff'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { font: { size: 11 }, padding: 8 } }
+      }
+    }
+  });
+} else {
+  ctx.parentElement.innerHTML = '<p style="color:var(--muted);text-align:center;line-height:260px">暂无项目数据</p>';
+}
+{% endif %}
+</script>
 {% endblock %}

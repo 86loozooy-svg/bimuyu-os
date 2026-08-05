@@ -87,7 +87,12 @@
 <div class="card">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
     <h3>报价 v{{ active_quote.version }} · {{ active_quote.template_name or '' }}</h3>
-    <a href="/app/projects/{{ project.id }}/quote/{{ active_quote.id }}/pdf" class="btn btn-outline">导出 PDF</a>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span style="font-size:.8rem;color:var(--muted)">导出：</span>
+      <a href="/app/projects/{{ project.id }}/quote/{{ active_quote.id }}/pdf" class="btn btn-outline" style="padding:6px 14px;font-size:.8rem">PDF</a>
+      <a href="/app/projects/{{ project.id }}/quote/{{ active_quote.id }}/excel" class="btn btn-outline" style="padding:6px 14px;font-size:.8rem">Excel</a>
+      <a href="/app/projects/{{ project.id }}/quote/{{ active_quote.id }}/word" class="btn btn-outline" style="padding:6px 14px;font-size:.8rem">Word</a>
+    </div>
   </div>
   <form method="post" action="/app/projects/{{ project.id }}/quote/{{ active_quote.id }}/update">
     {% for group in active_quote.parsed_detail.groups %}

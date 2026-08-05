@@ -1,10 +1,10 @@
 from datetime import date, timedelta
 
-from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Depends, Form, Request
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
-from app.auth import get_accessible_project_ids, get_current_user
+from app.auth import get_accessible_project_ids, get_current_user, log_audit, require_admin
 from app.config import BASE_DIR
 from app.database import db_session, row_to_dict, rows_to_list
 
@@ -93,6 +93,13 @@ async def dashboard(request: Request, user: dict = Depends(get_current_user)):
 
         studio = row_to_dict(conn.execute("SELECT * FROM studio_profile WHERE id = 1").fetchone())
 
+    # Status distribution for chart
+    status_dist = {col: 0 for col in STATUS_LABELS}
+    for p in projects:
+        s = p.get("status", "")
+        if s in status_dist:
+            status_dist[s] += 1
+
     return templates.TemplateResponse(
         "app/dashboard.html",
         {
@@ -108,6 +115,7 @@ async def dashboard(request: Request, user: dict = Depends(get_current_user)):
                 "leads": leads,
             },
             "status_labels": STATUS_LABELS,
+            "status_dist": status_dist,
         },
     )
 
@@ -143,3 +151,25 @@ async def pipeline(request: Request, user: dict = Depends(get_current_user)):
             "status_labels": STATUS_LABELS,
         },
     )
+
+
+@router.post("/pipeline/{project_id}/move")
+async def pipeline_move(
+    project_id: int,
+    status: str = Form(...),
+    user: dict = Depends(get_current_user),
+):
+    if status not in STATUS_LABELS:
+        return JSONResponse({"ok": False, "error": "invalid status"}, status_code=400)
+
+    from app.auth import user_can_access_project
+    if not user_can_access_project(user, project_id):
+        return JSONResponse({"ok": False, "error": "forbidden"}, status_code=403)
+
+    with db_session() as conn:
+        conn.execute(
+            "UPDATE projects SET status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+            (status, project_id),
+        )
+    log_audit(user["id"], "update", "project_status", project_id, f"-> {status}")
+    return JSONResponse({"ok": True})

@@ -4,39 +4,106 @@
 <div class="app-header"><h1>资料库</h1></div>
 
 <div class="tabs">
-  <a class="tab {% if not request.query_params.get('tab') or request.query_params.get('tab') == 'materials' %}active{% endif %}" href="?tab=materials">材料价格表</a>
-  <a class="tab {% if request.query_params.get('tab') == 'labor' %}active{% endif %}" href="?tab=labor">人工费表</a>
+  <a class="tab {% if not request.query_params.get('tab') or request.query_params.get('tab') == 'materials' %}active{% endif %}" href="?tab=materials&q={{ q }}&category={{ category }}">材料价格表</a>
+  <a class="tab {% if request.query_params.get('tab') == 'labor' %}active{% endif %}" href="?tab=labor&q={{ q }}">人工费表</a>
   <a class="tab {% if request.query_params.get('tab') == 'templates' %}active{% endif %}" href="?tab=templates">BOQ 模板</a>
 </div>
 
 {% set current_tab = request.query_params.get('tab', 'materials') %}
 
+{# ── Search bar (materials & labor only) ── #}
+{% if current_tab != 'templates' %}
+<form method="get" style="display:flex;gap:10px;margin-bottom:16px;align-items:end;flex-wrap:wrap">
+  <input type="hidden" name="tab" value="{{ current_tab }}">
+  <div class="form-group" style="margin:0;flex:1;min-width:200px">
+    <label>搜索</label>
+    <input name="q" value="{{ q }}" placeholder="{% if current_tab == 'materials' %}材料名/品牌/规格/供应商{% else %}工种名称{% endif %}" style="width:100%">
+  </div>
+  {% if current_tab == 'materials' %}
+  <div class="form-group" style="margin:0">
+    <label>分类</label>
+    <select name="category">
+      <option value="">全部</option>
+      {% for cat in categories %}
+      <option value="{{ cat }}" {% if category == cat %}selected{% endif %}>{{ cat }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  <button type="submit" class="btn">搜索</button>
+  {% if q or category %}
+  <a href="?tab={{ current_tab }}" class="btn btn-outline">清除</a>
+  {% endif %}
+</form>
+{% endif %}
+
 {% if current_tab == 'materials' %}
 <div class="card">
   {% if user.role == 'admin' %}
-  <form method="post" action="/app/library/materials/new" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:20px;align-items:end">
-    <div class="form-group" style="margin:0"><label>名称</label><input name="name" required></div>
-    <div class="form-group" style="margin:0"><label>品牌</label><input name="brand"></div>
-    <div class="form-group" style="margin:0"><label>规格</label><input name="spec"></div>
-    <div class="form-group" style="margin:0"><label>单位</label><input name="unit" value="㎡"></div>
-    <div class="form-group" style="margin:0"><label>参考价</label><input type="number" name="ref_price" step="0.01"></div>
-    <div class="form-group" style="margin:0"><label>分类</label>
-      <select name="category"><option>涂料</option><option>木材</option><option>金属</option><option>亚克力</option><option>灯具</option><option>其他</option></select>
-    </div>
-    <button type="submit" class="btn">添加</button>
-  </form>
+  <details style="margin-bottom:20px">
+    <summary style="cursor:pointer;font-weight:600;padding:8px 0">+ 新增材料</summary>
+    <form method="post" action="/app/library/materials/new" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:12px;align-items:end">
+      <div class="form-group" style="margin:0"><label>名称</label><input name="name" required></div>
+      <div class="form-group" style="margin:0"><label>品牌</label><input name="brand"></div>
+      <div class="form-group" style="margin:0"><label>规格</label><input name="spec"></div>
+      <div class="form-group" style="margin:0"><label>单位</label><input name="unit" value="㎡"></div>
+      <div class="form-group" style="margin:0"><label>参考价</label><input type="number" name="ref_price" step="0.01"></div>
+      <div class="form-group" style="margin:0"><label>分类</label>
+        <select name="category"><option>涂料</option><option>木材</option><option>金属</option><option>亚克力</option><option>灯具</option><option>其他</option></select>
+      </div>
+      <div class="form-group" style="margin:0"><label>供应商</label><input name="supplier"></div>
+      <button type="submit" class="btn">添加</button>
+    </form>
+  </details>
   {% endif %}
   <table>
-    <thead><tr><th>名称</th><th>品牌</th><th>规格</th><th>单位</th><th>参考价</th><th>分类</th>{% if user.role == 'admin' %}<th></th>{% endif %}</tr></thead>
+    <thead><tr><th>名称</th><th>品牌</th><th>规格</th><th>单位</th><th>参考价</th><th>分类</th><th>供应商</th>{% if user.role == 'admin' %}<th>操作</th>{% endif %}</tr></thead>
     <tbody>
       {% for m in materials %}
-      <tr>
-        <td>{{ m.name }}</td><td>{{ m.brand or '—' }}</td><td>{{ m.spec or '—' }}</td>
-        <td>{{ m.unit }}</td><td>¥{{ '{:,.2f}'.format(m.ref_price or 0) }}</td><td>{{ m.category }}</td>
+      <tr id="mat-row-{{ m.id }}">
+        {# Display mode #}
+        <td class="mat-display" data-field="name">{{ m.name }}</td>
+        <td class="mat-display" data-field="brand">{{ m.brand or '—' }}</td>
+        <td class="mat-display" data-field="spec">{{ m.spec or '—' }}</td>
+        <td class="mat-display" data-field="unit">{{ m.unit }}</td>
+        <td class="mat-display" data-field="ref_price">¥{{ '{:,.2f}'.format(m.ref_price or 0) }}</td>
+        <td class="mat-display" data-field="category">{{ m.category }}</td>
+        <td class="mat-display" data-field="supplier">{{ m.supplier or '—' }}</td>
         {% if user.role == 'admin' %}
-        <td><form method="post" action="/app/library/materials/{{ m.id }}/delete" style="display:inline"><button type="submit" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:.8rem">删除</button></form></td>
+        <td class="mat-display">
+          <button type="button" class="btn btn-outline" style="padding:4px 10px;font-size:.75rem" onclick="editMaterial({{ m.id }})">编辑</button>
+          <form method="post" action="/app/library/materials/{{ m.id }}/delete" style="display:inline" onsubmit="return confirm('确认删除？')">
+            <button type="submit" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:.75rem">删除</button>
+          </form>
+        </td>
         {% endif %}
       </tr>
+      <tr id="mat-edit-{{ m.id }}" style="display:none">
+        <td colspan="8" style="background:var(--bg-alt,#f8f6f3);padding:12px">
+          <form method="post" action="/app/library/materials/{{ m.id }}/edit" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;align-items:end">
+            <div class="form-group" style="margin:0"><label>名称</label><input name="name" value="{{ m.name }}" style="width:100%"></div>
+            <div class="form-group" style="margin:0"><label>品牌</label><input name="brand" value="{{ m.brand or '' }}" style="width:100%"></div>
+            <div class="form-group" style="margin:0"><label>规格</label><input name="spec" value="{{ m.spec or '' }}" style="width:100%"></div>
+            <div class="form-group" style="margin:0"><label>单位</label><input name="unit" value="{{ m.unit }}" style="width:60px"></div>
+            <div class="form-group" style="margin:0"><label>参考价</label><input type="number" name="ref_price" value="{{ m.ref_price or 0 }}" step="0.01" style="width:80px"></div>
+            <div class="form-group" style="margin:0"><label>分类</label>
+              <select name="category">
+                {% for cat in categories %}<option {% if m.category == cat %}selected{% endif %}>{{ cat }}</option>{% endfor %}
+                {% if m.category not in categories %}<option selected>{{ m.category }}</option>{% endif %}
+              </select>
+            </div>
+            <div class="form-group" style="margin:0"><label>供应商</label><input name="supplier" value="{{ m.supplier or '' }}" style="width:100%"></div>
+            <div style="display:flex;gap:6px">
+              <button type="submit" class="btn" style="padding:6px 12px;font-size:.75rem">保存</button>
+              <button type="button" class="btn btn-outline" style="padding:6px 12px;font-size:.75rem" onclick="cancelEdit({{ m.id }})">取消</button>
+            </div>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="{% if user.role == 'admin' %}8{% else %}7{% endif %}" style="color:var(--muted);text-align:center;padding:24px">
+        {% if q or category %}未找到匹配的材料{% else %}暂无材料数据{% endif %}
+      </td></tr>
       {% endfor %}
     </tbody>
   </table>
@@ -45,26 +112,62 @@
 {% elif current_tab == 'labor' %}
 <div class="card">
   {% if user.role == 'admin' %}
-  <form method="post" action="/app/library/labor/new" style="display:flex;gap:10px;margin-bottom:20px;align-items:end;flex-wrap:wrap">
-    <div class="form-group" style="margin:0"><label>工种</label><input name="name" required></div>
-    <div class="form-group" style="margin:0"><label>单位</label><input name="unit" value="工日"></div>
-    <div class="form-group" style="margin:0"><label>日薪</label><input type="number" name="day_rate" step="0.01"></div>
-    <div class="form-group" style="margin:0"><label>技能</label>
-      <select name="skill_level"><option>初级</option><option>中级</option><option>高级</option><option>专项</option></select>
-    </div>
-    <button type="submit" class="btn">添加</button>
-  </form>
+  <details style="margin-bottom:20px">
+    <summary style="cursor:pointer;font-weight:600;padding:8px 0">+ 新增工种</summary>
+    <form method="post" action="/app/library/labor/new" style="display:flex;gap:10px;margin-top:12px;align-items:end;flex-wrap:wrap">
+      <div class="form-group" style="margin:0"><label>工种</label><input name="name" required></div>
+      <div class="form-group" style="margin:0"><label>单位</label><input name="unit" value="工日"></div>
+      <div class="form-group" style="margin:0"><label>日薪</label><input type="number" name="day_rate" step="0.01"></div>
+      <div class="form-group" style="margin:0"><label>技能</label>
+        <select name="skill_level"><option>初级</option><option>中级</option><option>高级</option><option>专项</option></select>
+      </div>
+      <button type="submit" class="btn">添加</button>
+    </form>
+  </details>
   {% endif %}
   <table>
-    <thead><tr><th>工种</th><th>单位</th><th>日薪</th><th>技能</th>{% if user.role == 'admin' %}<th></th>{% endif %}</tr></thead>
+    <thead><tr><th>工种</th><th>单位</th><th>日薪</th><th>技能</th>{% if user.role == 'admin' %}<th>操作</th>{% endif %}</tr></thead>
     <tbody>
       {% for l in labor %}
-      <tr>
-        <td>{{ l.name }}</td><td>{{ l.unit }}</td><td>¥{{ '{:,.2f}'.format(l.day_rate or 0) }}</td><td>{{ l.skill_level }}</td>
+      <tr id="labor-row-{{ l.id }}">
+        <td class="labor-display">{{ l.name }}</td>
+        <td class="labor-display">{{ l.unit }}</td>
+        <td class="labor-display">¥{{ '{:,.2f}'.format(l.day_rate or 0) }}</td>
+        <td class="labor-display">{{ l.skill_level }}</td>
         {% if user.role == 'admin' %}
-        <td><form method="post" action="/app/library/labor/{{ l.id }}/delete" style="display:inline"><button type="submit" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:.8rem">删除</button></form></td>
+        <td class="labor-display">
+          <button type="button" class="btn btn-outline" style="padding:4px 10px;font-size:.75rem" onclick="editLabor({{ l.id }})">编辑</button>
+          <form method="post" action="/app/library/labor/{{ l.id }}/delete" style="display:inline" onsubmit="return confirm('确认删除？')">
+            <button type="submit" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:.75rem">删除</button>
+          </form>
+        </td>
         {% endif %}
       </tr>
+      <tr id="labor-edit-{{ l.id }}" style="display:none">
+        <td colspan="5" style="background:var(--bg-alt,#f8f6f3);padding:12px">
+          <form method="post" action="/app/library/labor/{{ l.id }}/edit" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap">
+            <div class="form-group" style="margin:0"><label>工种</label><input name="name" value="{{ l.name }}" style="width:100%"></div>
+            <div class="form-group" style="margin:0"><label>单位</label><input name="unit" value="{{ l.unit }}" style="width:60px"></div>
+            <div class="form-group" style="margin:0"><label>日薪</label><input type="number" name="day_rate" value="{{ l.day_rate or 0 }}" step="0.01" style="width:80px"></div>
+            <div class="form-group" style="margin:0"><label>技能</label>
+              <select name="skill_level">
+                <option {% if l.skill_level == '初级' %}selected{% endif %}>初级</option>
+                <option {% if l.skill_level == '中级' %}selected{% endif %}>中级</option>
+                <option {% if l.skill_level == '高级' %}selected{% endif %}>高级</option>
+                <option {% if l.skill_level == '专项' %}selected{% endif %}>专项</option>
+              </select>
+            </div>
+            <div style="display:flex;gap:6px">
+              <button type="submit" class="btn" style="padding:6px 12px;font-size:.75rem">保存</button>
+              <button type="button" class="btn btn-outline" style="padding:6px 12px;font-size:.75rem" onclick="cancelLaborEdit({{ l.id }})">取消</button>
+            </div>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="{% if user.role == 'admin' %}5{% else %}4{% endif %}" style="color:var(--muted);text-align:center;padding:24px">
+        {% if q %}未找到匹配的工种{% else %}暂无人工数据{% endif %}
+      </td></tr>
       {% endfor %}
     </tbody>
   </table>
@@ -86,4 +189,23 @@
   </table>
 </div>
 {% endif %}
+
+<script>
+function editMaterial(id) {
+  document.getElementById('mat-row-' + id).style.display = 'none';
+  document.getElementById('mat-edit-' + id).style.display = 'table-row';
+}
+function cancelEdit(id) {
+  document.getElementById('mat-edit-' + id).style.display = 'none';
+  document.getElementById('mat-row-' + id).style.display = 'table-row';
+}
+function editLabor(id) {
+  document.getElementById('labor-row-' + id).style.display = 'none';
+  document.getElementById('labor-edit-' + id).style.display = 'table-row';
+}
+function cancelLaborEdit(id) {
+  document.getElementById('labor-edit-' + id).style.display = 'none';
+  document.getElementById('labor-row-' + id).style.display = 'table-row';
+}
+</script>
 {% endblock %}

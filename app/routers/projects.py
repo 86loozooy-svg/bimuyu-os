@@ -8,7 +8,13 @@ from fastapi.templating import Jinja2Templates
 from app.auth import get_accessible_project_ids, get_current_user, log_audit, require_admin, user_can_access_project
 from app.config import BASE_DIR
 from app.database import db_session, row_to_dict, rows_to_list
-from app.services.quote_engine import calculate_quote_totals, export_quote_pdf, get_studio_defaults
+from app.services.quote_engine import (
+    calculate_quote_totals,
+    export_quote_excel,
+    export_quote_pdf,
+    export_quote_word,
+    get_studio_defaults,
+)
 
 router = APIRouter(prefix="/app/projects", tags=["projects"])
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -357,4 +363,50 @@ async def quote_pdf(project_id: int, quote_id: int, user: dict = Depends(get_cur
         content=bytes(pdf_bytes),
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="quote-{project["code"]}-v{quote["version"]}.pdf"'},
+    )
+
+
+@router.get("/{project_id}/quote/{quote_id}/excel")
+async def quote_excel(project_id: int, quote_id: int, user: dict = Depends(get_current_user)):
+    if not user_can_access_project(user, project_id) or user["role"] == "viewer":
+        raise HTTPException(status_code=403)
+
+    project = _get_project_or_404(project_id)
+    with db_session() as conn:
+        quote = row_to_dict(
+            conn.execute("SELECT * FROM quotes WHERE id = ? AND project_id = ?", (quote_id, project_id)).fetchone()
+        )
+        studio = row_to_dict(conn.execute("SELECT * FROM studio_profile WHERE id = 1").fetchone())
+
+    if not quote:
+        raise HTTPException(status_code=404)
+
+    excel_bytes = export_quote_excel(quote, project, studio or {})
+    return Response(
+        content=excel_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="quote-{project["code"]}-v{quote["version"]}.xlsx"'},
+    )
+
+
+@router.get("/{project_id}/quote/{quote_id}/word")
+async def quote_word(project_id: int, quote_id: int, user: dict = Depends(get_current_user)):
+    if not user_can_access_project(user, project_id) or user["role"] == "viewer":
+        raise HTTPException(status_code=403)
+
+    project = _get_project_or_404(project_id)
+    with db_session() as conn:
+        quote = row_to_dict(
+            conn.execute("SELECT * FROM quotes WHERE id = ? AND project_id = ?", (quote_id, project_id)).fetchone()
+        )
+        studio = row_to_dict(conn.execute("SELECT * FROM studio_profile WHERE id = 1").fetchone())
+
+    if not quote:
+        raise HTTPException(status_code=404)
+
+    word_bytes = export_quote_word(quote, project, studio or {})
+    return Response(
+        content=word_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="quote-{project["code"]}-v{quote["version"]}.docx"'},
     )
