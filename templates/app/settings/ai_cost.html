@@ -1,0 +1,37 @@
+{% extends "app/base.html" %}
+{% block title %}智能造价 · AI 解释设置 — Studio OS{% endblock %}
+{% block content %}
+<div class="app-header"><h1>智能造价 · AI 文案解释</h1></div>
+
+<div class="card" style="max-width:640px">
+  <form method="post" action="/app/settings/ai-cost">
+    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:1rem;font-weight:600">
+      <input type="checkbox" name="enabled" value="on" {{ 'checked' if enabled else '' }}>
+      启用 AI 文案解释
+    </label>
+    <p style="font-size:.82rem;color:var(--color-text-secondary);margin:10px 0 0">
+      开启后，造价卡片下方显示“AI 辅助解读”按钮，调用 SiliconFlow DeepSeek-V3 对三档数字生成 2-3 句解释。
+      <strong>AI 仅生成文字，绝不参与任何运算</strong>，所有数字以规则引擎为准。
+    </p>
+
+    <div style="margin-top:16px;padding:12px 14px;border-radius:var(--radius-md);background:var(--color-elevated);font-size:.85rem">
+      <div>环境变量 <code>SILICONFLOW_KEY</code>：
+        {% if has_key %}
+          <span style="color:greenyellow">已配置 ✓</span>
+        {% else %}
+          <span style="color:var(--color-error)">未配置 ✗</span>
+        {% endif %}
+      </div>
+      <p style="font-size:.78rem;color:var(--color-text-tertiary);margin:8px 0 0">
+        即使上方开关打开，若未设置 <code>SILICONFLOW_KEY</code> 环境变量，AI 解释仍不可用。请在部署环境中设置该变量（SiliconFlow 免费模型 key）。
+      </p>
+    </div>
+
+    <button type="submit" class="btn" style="margin-top:18px">保存</button>
+  </form>
+</div>
+
+<p style="margin-top:14px">
+  <a href="/app/settings" style="color:var(--color-accent);font-size:.85rem">← 返回设置</a>
+</p>
+{% endblock %}

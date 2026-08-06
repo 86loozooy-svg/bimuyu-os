@@ -1,0 +1,356 @@
+{% extends "app/base.html" %}
+{% block title %}智能造价预估 — Studio OS{% endblock %}
+{% block content %}
+<div class="app-header">
+  <h1>智能造价预估</h1>
+  <p style="color:var(--color-text-secondary);font-size:.875rem;margin-top:4px">
+    4 步调查表 → 规则引擎测算低 / 中 / 高三档预算与单平米价（不接任何 AI 参与运算）
+  </p>
+</div>
+
+{# ── Stepper ── #}
+<div class="stepper" id="stepper">
+  <div class="step active" data-step="1"><span class="dot">1</span><span class="lbl">基础属性</span></div>
+  <div class="step-line"></div>
+  <div class="step" data-step="2"><span class="dot">2</span><span class="lbl">功能分区</span></div>
+  <div class="step-line"></div>
+  <div class="step" data-step="3"><span class="dot">3</span><span class="lbl">材质设备</span></div>
+  <div class="step-line"></div>
+  <div class="step" data-step="4"><span class="dot">4</span><span class="lbl">服务范围</span></div>
+</div>
+
+<div class="card" id="panel">
+  {# ── 步骤 1：基础属性 ── #}
+  <section class="step-panel" data-panel="1">
+    <h3 style="margin-bottom:16px">① 基础属性</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px">
+      <div class="form-group"><label>项目类型</label><select id="f-type"></select></div>
+      <div class="form-group"><label>城市等级</label><select id="f-city"></select></div>
+      <div class="form-group"><label>建筑面积 (㎡)</label><input type="number" id="f-area" step="1" min="0" value="200"></div>
+      <div class="form-group"><label>层高 (m)</label><input type="number" id="f-fh" step="0.1" min="2" value="3.5"></div>
+      <div class="form-group"><label>旧改状态</label><select id="f-old"></select></div>
+    </div>
+  </section>
+
+  {# ── 步骤 2：功能分区面积拆分 ── #}
+  <section class="step-panel" data-panel="2" style="display:none">
+    <h3 style="margin-bottom:8px">② 功能分区面积拆分</h3>
+    <p style="font-size:.8rem;color:var(--color-text-tertiary);margin-bottom:12px">
+      可动态增删行。分区面积用于复杂度测算与明细展示；总预算以“基础属性”中的建筑面积为准。
+    </p>
+    <div id="zone-rows"></div>
+    <button type="button" class="btn btn-ghost" onclick="addZone()">+ 添加分区</button>
+  </section>
+
+  {# ── 步骤 3：材质与设备多选 ── #}
+  <section class="step-panel" data-panel="3" style="display:none">
+    <h3 style="margin-bottom:8px">③ 材质与设备（多选）</h3>
+    <p style="font-size:.8rem;color:var(--color-text-tertiary);margin-bottom:12px">
+      选项取自 <code>static/data/cost_base.json</code>，每选中一项即按该材质每平米加价累加。
+    </p>
+    <div id="mat-groups" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px"></div>
+  </section>
+
+  {# ── 步骤 4：服务范围 ── #}
+  <section class="step-panel" data-panel="4" style="display:none">
+    <h3 style="margin-bottom:14px">④ 服务范围</h3>
+    <div id="scope-radios" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px"></div>
+    <h3 style="margin:22px 0 12px">参考历史项目</h3>
+    <div class="form-group" style="max-width:420px">
+      <label>历史造价样本（可选，仅作参考）</label>
+      <select id="f-ref"></select>
+    </div>
+    <p id="ref-hint" style="font-size:.8rem;color:var(--color-text-tertiary);margin-top:6px"></p>
+  </section>
+
+  <div style="display:flex;justify-content:space-between;margin-top:22px">
+    <button type="button" class="btn btn-ghost" id="btn-prev" onclick="goStep(-1)" style="visibility:hidden">← 上一步</button>
+    <button type="button" class="btn" id="btn-next" onclick="goStep(1)">下一步 →</button>
+    <button type="button" class="btn btn-accent" id="btn-submit" onclick="submitEstimate()" style="display:none">提交测算</button>
+  </div>
+  <div id="form-error" style="color:var(--color-error);font-size:.85rem;margin-top:10px"></div>
+</div>
+
+{# ── 结果区 ── #}
+<div id="result" style="display:none;margin-top:24px">
+  <h3 style="margin-bottom:14px">测算结果</h3>
+  <div class="tier-cards" id="tier-cards"></div>
+
+  <div id="ai-wrap" style="display:none;margin-top:18px">
+    <button type="button" class="btn btn-ghost" id="btn-ai" onclick="runAi()">✨ AI 辅助解读</button>
+    <div id="ai-box" style="display:none;margin-top:12px;padding:16px 18px;border-radius:var(--radius-md);background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);font-size:.9rem;line-height:1.7;white-space:pre-wrap"></div>
+    <div style="font-size:.72rem;color:var(--color-text-tertiary);margin-top:6px">AI 辅助解读·仅供参考（数字以规则引擎为准，AI 不参与运算）</div>
+  </div>
+
+  <details style="margin-top:18px">
+    <summary style="cursor:pointer;color:var(--color-text-secondary);font-size:.85rem">查看计算明细 breakdown（调试用）</summary>
+    <pre id="breakdown" style="margin-top:10px;padding:14px;background:#0d0f12;border-radius:var(--radius-md);overflow:auto;font-size:.78rem;color:#9fb3c8"></pre>
+  </details>
+</div>
+
+<style>
+.stepper{display:flex;align-items:center;gap:0;margin:8px 0 18px;flex-wrap:wrap}
+.step{display:flex;align-items:center;gap:8px;opacity:.55;transition:.2s}
+.step.active,.step.done{opacity:1}
+.step .dot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:.8rem;font-weight:700;background:var(--color-elevated);border:1px solid rgba(255,255,255,.15);color:var(--color-text-secondary)}
+.step.active .dot{background:var(--color-accent);color:#0b0b0b;border-color:var(--color-accent)}
+.step.done .dot{background:rgba(43,224,140,.2);border-color:rgba(43,224,140,.5);color:#2be08c}
+.step .lbl{font-size:.85rem;font-weight:600;color:var(--color-text)}
+.step-line{flex:1;height:2px;min-width:18px;background:rgba(255,255,255,.12);margin:0 10px}
+
+.card{padding:22px}
+.form-group{margin:0}
+.form-group label{display:block;font-size:.8rem;color:var(--color-text-secondary);margin-bottom:6px}
+select,input[type=number],input[type=text]{width:100%;padding:9px 11px;border-radius:var(--radius-sm);
+  background:var(--color-elevated);border:1px solid rgba(255,255,255,.12);color:var(--color-text);font-size:.9rem}
+select:focus,input:focus{outline:none;border-color:var(--color-accent)}
+
+#zone-rows .zone-row{display:grid;grid-template-columns:1fr 120px 36px;gap:10px;align-items:end;margin-bottom:10px}
+.zone-row input{padding:8px 10px}
+.zone-del{background:none;border:1px solid rgba(255,255,255,.15);color:var(--color-error);border-radius:var(--radius-sm);cursor:pointer;height:36px}
+
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;margin:0 6px 8px 0;border-radius:999px;
+  background:var(--color-elevated);border:1px solid rgba(255,255,255,.12);font-size:.82rem;cursor:pointer;user-select:none}
+.chip input{accent-color:var(--color-accent)}
+.chip:has(input:checked){border-color:var(--color-accent);background:rgba(255,255,255,.06)}
+
+.scope-card{border:1px solid rgba(255,255,255,.12);border-radius:var(--radius-md);padding:12px 14px;cursor:pointer;font-size:.88rem}
+.scope-card:has(input:checked){border-color:var(--color-accent);background:rgba(255,255,255,.05)}
+
+/* ── 三档卡片 ── */
+.tier-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.tier{border-radius:var(--radius-lg);padding:22px;position:relative;overflow:hidden}
+.tier h4{font-size:.95rem;margin-bottom:4px;letter-spacing:.5px}
+.tier .ttl-sub{font-size:.72rem;color:var(--color-text-tertiary)}
+.tier .total{font-size:1.9rem;font-weight:800;margin:12px 0 4px;line-height:1.1}
+.tier .ps{font-size:.85rem;color:var(--color-text-secondary)}
+.tier .bar{height:6px;border-radius:6px;margin-top:14px;background:linear-gradient(90deg,var(--color-accent),transparent)}
+.tier-low{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.10)}
+.tier-mid{background:linear-gradient(160deg,#2a2622,#211d1a);border:1px solid #5a4f45}
+.tier-high{background:linear-gradient(160deg,#1c1f16,#161a12);border:2px solid greenyellow;box-shadow:0 0 24px rgba(173,255,47,.12)}
+.tier-high .total{color:greenyellow}
+.tier-high h4{color:greenyellow}
+
+.btn-ghost{background:transparent;border:1px solid rgba(255,255,255,.18);color:var(--color-text)}
+.btn-accent{background:var(--color-accent);color:#0b0b0b;font-weight:700;border:none}
+
+@media (max-width:760px){
+  .tier-cards{grid-template-columns:1fr}
+  .step .lbl{display:none}
+  .step-line{min-width:8px;margin:0 6px}
+}
+</style>
+
+<script>
+let CFG = null;
+let currentStep = 1;
+let lastResult = null;
+const ZONE_PRESETS = ["前厅","营业","后厨","外立面","仓储","办公","卫生间","其他"];
+
+function fmt(n){ return "¥" + Math.round(n).toLocaleString("zh-CN"); }
+
+async function loadConfig(){
+  const r = await fetch("/api/cost-estimate");
+  CFG = await r.json();
+  // 步骤1 下拉
+  fillSelect("f-type", CFG.types, CFG.type_labels);
+  fillSelect("f-city", CFG.city_tiers);
+  fillSelect("f-old", CFG.old_statuses);
+  document.getElementById("f-fh").value = CFG.floor_base_m || 3.5;
+  // 步骤3 材质分组
+  const mg = document.getElementById("mat-groups");
+  mg.innerHTML = "";
+  Object.keys(CFG.material_groups).forEach(cat=>{
+    const opts = CFG.material_groups[cat];
+    let chips = "";
+    opts.forEach(o=>{
+      chips += `<label class="chip"><input type="checkbox" data-cat="${cat}" value="${o}"> ${o}</label>`;
+    });
+    mg.insertAdjacentHTML("beforeend",
+      `<div class="mat-group"><h4 style="margin:0 0 8px;font-size:.85rem">${cat}</h4><div>${chips}</div></div>`);
+  });
+  // 步骤4 服务范围
+  const sr = document.getElementById("scope-radios");
+  sr.innerHTML = "";
+  CFG.service_scopes.forEach((s,i)=>{
+    sr.insertAdjacentHTML("beforeend",
+      `<label class="scope-card"><input type="radio" name="scope" value="${s}" ${i===0?"checked":""}> ${s}</label>`);
+  });
+  // 步骤4 历史下拉
+  const ref = document.getElementById("f-ref");
+  let opts = `<option value="">— 不参考 —</option>`;
+  (CFG.history||[]).forEach(h=>{
+    opts += `<option value="${h.id}">${h.type} · ${h.area}㎡ · ¥${Math.round(h.actual_per_sqm)}/㎡ (${h.project_name||""})</option>`;
+  });
+  ref.innerHTML = opts;
+  ref.onchange = ()=>{
+    const h = (CFG.history||[]).find(x=>String(x.id)===ref.value);
+    document.getElementById("ref-hint").textContent = h
+      ? `该样本实际单平米 ¥${Math.round(h.actual_per_sqm)}，可作为同类型参考基线。规则引擎会自动优先匹配同类型最近 3 条历史。`
+      : "";
+  };
+}
+
+function fillSelect(id, arr, labels){
+  const el = document.getElementById(id);
+  el.innerHTML = arr.map(v=>`<option value="${v}">${labels? (labels[v]||v): v}</option>`).join("");
+}
+
+function addZone(name, area){
+  const wrap = document.getElementById("zone-rows");
+  const row = document.createElement("div");
+  row.className = "zone-row";
+  const sel = `<select onchange="if(this.value)this.nextElementSibling.value=this.value">`
+    + `<option value="">自定义</option>`
+    + ZONE_PRESETS.map(z=>`<option ${z===name?"selected":""}>${z}</option>`).join("") + `</select>`;
+  row.innerHTML = sel
+    + `<input type="number" class="z-area" step="1" min="0" placeholder="面积㎡" value="${area||""}">`
+    + `<button type="button" class="zone-del" onclick="this.parentNode.remove()">✕</button>`;
+  wrap.appendChild(row);
+}
+
+function goStep(delta){
+  const next = currentStep + delta;
+  if(next < 1 || next > 4) return;
+  document.querySelector(`.step-panel[data-panel="${currentStep}"]`).style.display = "none";
+  document.querySelector(`.step-panel[data-panel="${next}"]`).style.display = "block";
+  // stepper state
+  document.querySelectorAll(".step").forEach(s=>{
+    const n = +s.dataset.step;
+    s.classList.toggle("active", n===next);
+    s.classList.toggle("done", n < next);
+  });
+  currentStep = next;
+  document.getElementById("btn-prev").style.visibility = next>1 ? "visible":"hidden";
+  document.getElementById("btn-next").style.display = next<4 ? "inline-block":"none";
+  document.getElementById("btn-submit").style.display = next===4 ? "inline-block":"none";
+  document.getElementById("form-error").textContent = "";
+}
+
+function collectSurvey(){
+  const zones = [];
+  document.querySelectorAll("#zone-rows .zone-row").forEach(r=>{
+    const name = r.querySelector("select").value || r.querySelector("input").value || "分区";
+    const area = parseFloat(r.querySelector(".z-area").value) || 0;
+    if(area>0) zones.push({name, area});
+  });
+  const materials = {};
+  document.querySelectorAll('#mat-groups input[type=checkbox]:checked').forEach(cb=>{
+    (materials[cb.dataset.cat] = materials[cb.dataset.cat] || []).push(cb.value);
+  });
+  const scope = document.querySelector('input[name="scope"]:checked');
+  return {
+    type: document.getElementById("f-type").value,
+    city_tier: document.getElementById("f-city").value,
+    area: parseFloat(document.getElementById("f-area").value) || 0,
+    floor_height: parseFloat(document.getElementById("f-fh").value) || CFG.floor_base_m,
+    old_status: document.getElementById("f-old").value,
+    zones,
+    materials,
+    service_scope: scope ? scope.value : (CFG.service_scopes[0]||""),
+    ref_history_id: document.getElementById("f-ref").value || null
+  };
+}
+
+async function submitEstimate(){
+  const err = document.getElementById("form-error");
+  err.textContent = "";
+  const survey = collectSurvey();
+  if(!survey.type || !survey.area){
+    err.textContent = "请填写项目类型与建筑面积"; return;
+  }
+  const r = await fetch("/api/cost-estimate",{
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify(survey)
+  });
+  if(!r.ok){
+    const e = await r.json().catch(()=>({error:"请求失败"}));
+    err.textContent = e.error || "测算失败"; return;
+  }
+  const data = await r.json();
+  lastResult = data;
+  renderResult(data);
+}
+
+function renderResult(d){
+  const t = d.tiers;
+  const cards = document.getElementById("tier-cards");
+  const defs = [
+    {key:"low", cls:"tier-low", name:"低档", sub:"经济方案 · 中档×0.82"},
+    {key:"mid", cls:"tier-mid", name:"中档", sub:"标准方案 · 基准测算"},
+    {key:"high", cls:"tier-high", name:"高档", sub:"品质方案 · 中档×1.25"}
+  ];
+  cards.innerHTML = defs.map(x=>{
+    const v = t[x.key];
+    return `<div class="tier ${x.cls}">
+      <h4>${x.name}</h4><div class="ttl-sub">${x.sub}</div>
+      <div class="total">${fmt(v.total)}</div>
+      <div class="ps">单平米 ${fmt(v.per_sqm)} / ㎡</div>
+      <div class="bar"></div>
+    </div>`;
+  }).join("");
+  document.getElementById("breakdown").textContent = JSON.stringify(d.breakdown, null, 2);
+  // AI 区块
+  document.getElementById("ai-wrap").style.display = (CFG && CFG.ai_enabled) ? "block":"none";
+  document.getElementById("ai-box").style.display = "none";
+  document.getElementById("ai-box").textContent = "";
+  document.getElementById("result").style.display = "block";
+  document.getElementById("result").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+async function runAi(){
+  if(!lastResult) return;
+  const btn = document.getElementById("btn-ai");
+  const box = document.getElementById("ai-box");
+  box.style.display = "block";
+  box.textContent = "";
+  btn.disabled = true; btn.textContent = "AI 解读中…";
+  try{
+    const resp = await fetch("/ai/chat",{
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({survey: lastResult, tiers: lastResult.tiers})
+    });
+    if(!resp.ok){
+      const e = await resp.json().catch(()=>({error:"AI 未启用"}));
+      box.textContent = "⚠️ " + (e.error || "AI 解释不可用");
+      return;
+    }
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    while(true){
+      const {done, value} = await reader.read();
+      if(done) break;
+      buf += dec.decode(value, {stream:true});
+      const parts = buf.split("\n\n");
+      buf = parts.pop();
+      for(const p of parts){
+        const line = p.trim();
+        if(!line.startsWith("data:")) continue;
+        const payload = line.slice(5).trim();
+        if(payload === "[DONE]") continue;
+        try{
+          const obj = JSON.parse(payload);
+          if(obj.token) box.textContent += obj.token;
+          if(obj.error) box.textContent = "⚠️ " + obj.error;
+        }catch(e){}
+      }
+    }
+  }catch(e){
+    box.textContent = "⚠️ 流式读取失败：" + e.message;
+  }finally{
+    btn.disabled = false; btn.textContent = "✨ AI 辅助解读";
+  }
+}
+
+window.addEventListener("DOMContentLoaded", ()=>{
+  loadConfig().catch(e=>{
+    document.getElementById("form-error").textContent = "加载配置失败：" + e.message;
+  });
+  addZone("前厅", 30);
+  addZone("营业", 120);
+  addZone("后厨", 50);
+});
+</script>
+{% endblock %}

@@ -205,6 +205,27 @@
     {% endif %}
   </details>
   {% endif %}
+
+  {% if user.role == 'admin' %}
+  <div class="card" style="margin-top:18px">
+    <h3 style="margin-bottom:6px">历史造价样本</h3>
+    <p style="font-size:.8rem;color:var(--color-text-secondary);margin-bottom:12px">
+      将本项目（行业：{{ project.industry or '—' }}，面积：{{ project.area or '—' }}㎡）标记为历史造价样本，
+      写入 <code>data/cost_history.json</code>。规则引擎将优先匹配同行业最近 3 条样本作为基准单平米。
+    </p>
+    {% if request.query_params.get('marked') %}
+    <div style="padding:8px 12px;border-radius:var(--radius-sm);background:rgba(43,224,140,.15);color:#2be08c;font-size:.85rem;margin-bottom:12px">✓ 已标记为历史造价样本</div>
+    {% endif %}
+    {% if request.query_params.get('mark_error') %}
+    <div style="padding:8px 12px;border-radius:var(--radius-sm);background:rgba(255,90,90,.15);color:#ff6b6b;font-size:.85rem;margin-bottom:12px">✗ 无法标记：请填写实际总造价且项目面积需大于 0</div>
+    {% endif %}
+    <form method="post" action="/app/projects/{{ project.id }}/mark-cost-sample" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;align-items:end">
+      <div class="form-group" style="margin:0"><label>实际总造价 (¥)</label><input type="number" name="actual_total" step="1000" min="0" placeholder="完工实际花费" required></div>
+      <div class="form-group" style="margin:0"><label>材质标签（逗号分隔，可选）</label><input type="text" name="material_tags" placeholder="如：石材,智能调光"></div>
+      <button type="submit" class="btn">标记为历史造价样本</button>
+    </form>
+  </div>
+  {% endif %}
 </div>
 
 {% elif tab == 'brief' %}
