@@ -39,6 +39,9 @@
     <div><span style="color:var(--color-text-secondary)">开始：</span>{{ project.start_date or '—' }}</div>
     <div><span style="color:var(--color-text-secondary)">截止：</span>{{ project.deadline or '—' }}</div>
     <div><span style="color:var(--color-text-secondary)">客户：</span>{{ project.client_name or '—' }}</div>
+    <div><span style="color:var(--color-text-secondary)">主案设计师：</span>{{ project.lead_designer or '—' }}</div>
+    <div><span style="color:var(--color-text-secondary)">协助设计师：</span>{{ project.assistant_designer or '—' }}</div>
+    <div><span style="color:var(--color-text-secondary)">施工负责人：</span>{{ project.construction_lead or '—' }}</div>
   </div>
 
   {% if user.role == 'admin' %}
@@ -95,28 +98,114 @@
         <label>截止日期</label>
         <input type="date" name="deadline" value="{{ project.deadline or '' }}">
       </div>
+      <div class="form-group" style="margin:0">
+        <label>主案设计师</label>
+        <input type="text" name="lead_designer" value="{{ project.lead_designer or '' }}" placeholder="如：李设计">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>协助设计师</label>
+        <input type="text" name="assistant_designer" value="{{ project.assistant_designer or '' }}" placeholder="如：王设计">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>施工负责人</label>
+        <input type="text" name="construction_lead" value="{{ project.construction_lead or '' }}" placeholder="如：赵工">
+      </div>
       <button type="submit" class="btn">保存</button>
     </form>
   </details>
   {% endif %}
 </div>
-{% if milestones %}
+{% set ms_status_labels = {'done':'完成','active':'进行中','delayed':'延期','upcoming':'待开始'} %}
 <div class="card">
-  <h3 style="margin-bottom:16px">时间轴</h3>
-  <table>
-    <thead><tr><th>里程碑</th><th>截止</th><th>状态</th></tr></thead>
-    <tbody>
+  <h3 style="margin-bottom:6px">项目时间线</h3>
+  <p style="font-size:.75rem;color:var(--color-text-tertiary);margin-bottom:14px">横向色块表示各里程碑工期，颜色区分状态</p>
+
+  {% if timeline %}
+  <div class="gantt">
+    <div class="gantt__axis">
+      <span>{{ timeline.start }}</span>
+      <span class="gantt__axis-range">共 {{ timeline.total_days }} 天</span>
+      <span>{{ timeline.end }}</span>
+    </div>
+    <div class="gantt__canvas">
+      <div class="gantt__labels">
+        {% for it in timeline['items'] %}
+        <div class="gantt__label" title="{{ it.name }}">{{ it.name }}</div>
+        {% endfor %}
+      </div>
+      <div class="gantt__tracks">
+        {% if timeline.today_offset is not none %}
+        <div class="gantt__today" style="left:{{ timeline.today_offset }}%"></div>
+        {% endif %}
+        {% for it in timeline['items'] %}
+        <div class="gantt__track">
+          <div class="gantt__bar gantt__bar--{{ it.status }}"
+               style="left:{{ it.left_pct }}%;width:{{ it.width_pct }}%"
+               title="{{ it.name }} · {{ it.start }} → {{ it.end }} · {{ ms_status_labels.get(it.status, it.status) }}">
+            <span class="gantt__bar-label">{{ it.start }} → {{ it.end }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="gantt__legend">
+      <span class="gantt__legend-item"><i class="gantt__dot gantt__dot--done"></i>完成</span>
+      <span class="gantt__legend-item"><i class="gantt__dot gantt__dot--active"></i>进行中</span>
+      <span class="gantt__legend-item"><i class="gantt__dot gantt__dot--delayed"></i>延期</span>
+      <span class="gantt__legend-item"><i class="gantt__dot gantt__dot--upcoming"></i>待开始</span>
+    </div>
+  </div>
+  {% else %}
+  <p style="color:var(--color-text-tertiary);padding:12px 0">暂无排期数据，请在下方添加里程碑。</p>
+  {% endif %}
+
+  {% if user.role == 'admin' %}
+  <details style="margin-top:18px">
+    <summary style="cursor:pointer;font-weight:600;padding:8px 0;color:var(--color-accent)">+ 管理里程碑</summary>
+
+    <form method="post" action="/app/projects/{{ project.id }}/milestones/add"
+          style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;margin-top:12px;align-items:end">
+      <div class="form-group" style="margin:0"><label>里程碑</label><input type="text" name="name" placeholder="如：方案初稿" required></div>
+      <div class="form-group" style="margin:0"><label>开始</label><input type="date" name="start_date"></div>
+      <div class="form-group" style="margin:0"><label>结束</label><input type="date" name="end_date"></div>
+      <div class="form-group" style="margin:0">
+        <label>状态</label>
+        <select name="status">
+          <option value="active">进行中</option>
+          <option value="done">完成</option>
+          <option value="delayed">延期</option>
+          <option value="upcoming">待开始</option>
+        </select>
+      </div>
+      <button type="submit" class="btn">添加</button>
+    </form>
+
+    {% if milestones %}
+    <div style="margin-top:16px">
       {% for m in milestones %}
-      <tr>
-        <td>{{ m.name }}</td>
-        <td>{{ m.due_date or '—' }}</td>
-        <td>{% if m.done %}✓ 完成{% else %}进行中{% endif %}</td>
-      </tr>
+      <div class="ms-row">
+        <form method="post" action="/app/projects/{{ project.id }}/milestones/{{ m.id }}/update" class="ms-edit">
+          <input type="text" name="name" value="{{ m.name }}">
+          <input type="date" name="start_date" value="{{ m.start_date or '' }}">
+          <input type="date" name="end_date" value="{{ m.end_date or m.due_date or '' }}">
+          <select name="status">
+            {% for key, label in ms_status_labels.items() %}
+            <option value="{{ key }}" {% if (m.status or ('done' if m.done else 'active')) == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn btn-outline" style="padding:6px 14px;font-size:.75rem;white-space:nowrap">保存</button>
+        </form>
+        <form method="post" action="/app/projects/{{ project.id }}/milestones/{{ m.id }}/delete"
+              onsubmit="return confirm('确认删除该里程碑？')">
+          <button type="submit" class="ms-del" title="删除">✕</button>
+        </form>
+      </div>
       {% endfor %}
-    </tbody>
-  </table>
+    </div>
+    {% endif %}
+  </details>
+  {% endif %}
 </div>
-{% endif %}
 
 {% elif tab == 'brief' %}
 <div class="card">

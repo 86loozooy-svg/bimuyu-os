@@ -46,6 +46,86 @@ def _get_project_or_404(project_id: int) -> dict:
     return project
 
 
+def _parse_date(s):
+    if not s:
+        return None
+    try:
+        return date.fromisoformat(str(s)[:10])
+    except (ValueError, TypeError):
+        return None
+
+
+def _build_timeline(project: dict, milestones: list) -> dict | None:
+    """预计算甘特坐标（left%/width%）与每条里程碑的有效状态，供模板纯 CSS 渲染。"""
+    today = date.today()
+    anchors = []
+    for m in milestones:
+        s = _parse_date(m.get("start_date")) or _parse_date(m.get("end_date")) or _parse_date(m.get("due_date"))
+        e = _parse_date(m.get("end_date")) or _parse_date(m.get("due_date"))
+        if s:
+            anchors.append(s)
+        if e:
+            anchors.append(e)
+    ps = _parse_date(project.get("start_date"))
+    pe = _parse_date(project.get("deadline"))
+    if ps:
+        anchors.append(ps)
+    if pe:
+        anchors.append(pe)
+    if not anchors:
+        return None
+
+    range_start = min(anchors)
+    range_end = max(anchors)
+    total_days = (range_end - range_start).days
+    if total_days <= 0:
+        total_days = 1
+
+    items = []
+    for m in milestones:
+        s = _parse_date(m.get("start_date")) or _parse_date(m.get("end_date")) or _parse_date(m.get("due_date"))
+        e = _parse_date(m.get("end_date")) or _parse_date(m.get("due_date"))
+        if not s:
+            s = range_start
+        if not e:
+            e = s
+        if e < s:
+            e = s
+        left = (s - range_start).days / total_days * 100
+        width = max((e - s).days, 1) / total_days * 100
+        status = m.get("status") or ""
+        if not status:
+            status = (
+                "done"
+                if m.get("done")
+                else ("delayed" if (m.get("due_date") and _parse_date(m.get("due_date")) < today) else "active")
+            )
+        items.append(
+            {
+                "id": m.get("id"),
+                "name": m.get("name"),
+                "start": m.get("start_date"),
+                "end": m.get("end_date") or m.get("due_date"),
+                "due": m.get("due_date"),
+                "status": status,
+                "left_pct": round(left, 2),
+                "width_pct": round(width, 2),
+            }
+        )
+
+    today_offset = None
+    if range_start <= today <= range_end:
+        today_offset = (today - range_start).days / total_days * 100
+
+    return {
+        "start": range_start.isoformat(),
+        "end": range_end.isoformat(),
+        "total_days": total_days,
+        "today_offset": round(today_offset, 2) if today_offset is not None else None,
+        "items": items,
+    }
+
+
 @router.get("", response_class=HTMLResponse)
 async def project_list(request: Request, user: dict = Depends(get_current_user)):
     project_ids = get_accessible_project_ids(user)
@@ -129,6 +209,11 @@ async def project_edit(
         val = form.get(key)
         if val is not None and val != "":
             fields[key] = val
+    # 设计师字段：允许留空以清空
+    for dkey in ("lead_designer", "assistant_designer", "construction_lead"):
+        if dkey in form:
+            fields[dkey] = (form.get(dkey) or "")
+
     # type conversions
     if "client_id" in fields:
         fields["client_id"] = int(fields["client_id"]) or None
@@ -153,6 +238,79 @@ async def project_edit(
     # redirect back to referring page
     redirect_url = form.get("redirect", f"/app/projects/{project_id}")
     return RedirectResponse(url=redirect_url, status_code=303)
+
+
+@router.post("/{project_id}/milestones/add")
+async def add_milestone(
+    project_id: int,
+    request: Request,
+    user: dict = Depends(get_current_user),
+):
+    """新增里程碑（含工期与状态，供甘特时间线使用）."""
+    if not user_can_access_project(user, project_id) or user["role"] != "admin":
+        raise HTTPException(status_code=403)
+    form = await request.form()
+    name = (form.get("name") or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="里程碑名称不能为空")
+    start_date = form.get("start_date") or None
+    end_date = form.get("end_date") or None
+    status = form.get("status") or "active"
+    with db_session() as conn:
+        conn.execute(
+            """
+            INSERT INTO project_milestones
+                (project_id, name, start_date, end_date, due_date, status, done)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (project_id, name, start_date, end_date, end_date, status, 1 if status == "done" else 0),
+        )
+    log_audit(user["id"], "create", "milestone", project_id)
+    return RedirectResponse(url=f"/app/projects/{project_id}?tab=overview", status_code=303)
+
+
+@router.post("/{project_id}/milestones/{mid}/update")
+async def update_milestone(
+    project_id: int,
+    mid: int,
+    request: Request,
+    user: dict = Depends(get_current_user),
+):
+    if not user_can_access_project(user, project_id) or user["role"] != "admin":
+        raise HTTPException(status_code=403)
+    form = await request.form()
+    name = (form.get("name") or "").strip()
+    start_date = form.get("start_date") or None
+    end_date = form.get("end_date") or None
+    status = form.get("status") or "active"
+    with db_session() as conn:
+        conn.execute(
+            """
+            UPDATE project_milestones
+            SET name = ?, start_date = ?, end_date = ?, due_date = ?, status = ?, done = ?
+            WHERE id = ? AND project_id = ?
+            """,
+            (name, start_date, end_date, end_date, status, 1 if status == "done" else 0, mid, project_id),
+        )
+    log_audit(user["id"], "update", "milestone", project_id)
+    return RedirectResponse(url=f"/app/projects/{project_id}?tab=overview", status_code=303)
+
+
+@router.post("/{project_id}/milestones/{mid}/delete")
+async def delete_milestone(
+    project_id: int,
+    mid: int,
+    user: dict = Depends(get_current_user),
+):
+    if not user_can_access_project(user, project_id) or user["role"] != "admin":
+        raise HTTPException(status_code=403)
+    with db_session() as conn:
+        conn.execute(
+            "DELETE FROM project_milestones WHERE id = ? AND project_id = ?",
+            (mid, project_id),
+        )
+    log_audit(user["id"], "delete", "milestone", project_id)
+    return RedirectResponse(url=f"/app/projects/{project_id}?tab=overview", status_code=303)
 
 
 @router.get("/{project_id}", response_class=HTMLResponse)
@@ -204,6 +362,8 @@ async def project_detail(
         )
         clients = rows_to_list(conn.execute("SELECT * FROM clients ORDER BY name").fetchall())
 
+    timeline = _build_timeline(project, milestones)
+
     show_finance = user["role"] == "admin"
     if user["role"] == "viewer":
         for q in quotes:
@@ -229,6 +389,7 @@ async def project_detail(
             "project": project,
             "tab": tab,
             "milestones": milestones,
+            "timeline": timeline,
             "feedback": feedback,
             "quotes": quotes,
             "active_quote": active_quote,
