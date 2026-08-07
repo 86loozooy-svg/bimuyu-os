@@ -5,7 +5,7 @@
    - 右侧三列各自 @keyframes 平移 -50%（双份卡片无缝循环）
    - 速度差：col-1=30s(基准) / col-2=20s(最快) / col-3=26s(中等)
    - 悬停整体暂停：纯 CSS，无 JS
-   - 卡片直角(border-radius:0)、图片自然高度、轻微阴影
+   - 卡片直角(border-radius:0)、图片 object-fit:cover 填充、轻微阴影
    - 配色沿用站点：#63615A / greenyellow(#c8ff00) / 浅米背景
    ========================================================= */
 
@@ -86,9 +86,13 @@
           mask-image: linear-gradient(to bottom, transparent 0, #000 6%, #000 94%, transparent 100%);
 }
 
-/* 单列：承载双份 cases，平移自身 -50% 实现无缝循环 */
+/* 单列：承载双份 cases，平移自身 -50% 实现无缝循环
+   改为 CSS Grid（grid-auto-rows 基础行高），卡片用 grid-row: span 控制高度 → 不规则瀑布流 */
 .scroll-column {
-  display: block;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-auto-rows: 8px;           /* 基础行高：span(N) = N×8px 即卡片高度 */
+  align-self: start;             /* 不被外层容器拉伸，保留内容自然高度 → 无缝循环精确 */
   min-width: 0;
   animation-name: caseScrollUp;
   animation-timing-function: linear;
@@ -110,10 +114,11 @@
   .case-scroll-container:hover .scroll-column { animation-play-state: paused; }
 }
 
-/* ---------- 卡片：直角、轻微阴影、图片自然高度（不裁切） ---------- */
+/* ---------- 卡片：直角、轻微阴影、flex 纵向（图片填充 + 标题在底） ---------- */
 .case-card {
-  display: block;
-  margin-bottom: 16px;                /* 用 margin 留白保证无缝循环 */
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16px;                /* 列内卡片间距；双份渲染 → 无缝循环精确 */
   background: #fff;
   border-radius: 0;                   /* 直角矩形 */
   overflow: hidden;
@@ -126,20 +131,23 @@
   text-decoration: none;
 }
 .case-card .case-img {
-  display: block;
+  flex: 1 1 auto;                     /* 填满卡片剩余高度 */
+  min-height: 0;                      /* 允许在 flex 中收缩，图片不撑破卡片 */
   width: 100%;
-  height: auto;                       /* 宽度撑满，高度由下方 size 类决定 */
-  object-fit: cover;                  /* size 类给定高度时裁切填充，避免空白/变形 */
+  height: 100%;
+  object-fit: cover;                  /* 按比例填充容器，绝不拉伸变形 */
+  object-position: center;            /* 主体居中 */
+  display: block;
   background: #d4c5b3;                /* 占位底色（无图时） */
 }
 
-/* ---------- 不规则尺寸：按 size 类给图片分配不同宽高比 → 自然错落的瀑布流感 ----------
-   列是纵向堆叠（非 CSS Grid），故用「不同高度」实现（用户允许的 grid-row 替代方案）；
+/* ---------- 不规则尺寸：grid-row: span 控制卡片高度（列已是 CSS Grid） ----------
+   图片用 object-fit: cover 按比例填充，不拉伸、不变形；
    三列速度差滚动、悬停暂停、直角、双重循环逻辑均保持不变。 */
-.case-card.large  .case-img { aspect-ratio: 3 / 4.4; }   /* 大图：高 */
-.case-card.medium .case-img { aspect-ratio: 4 / 3; }     /* 中图：标准 */
-.case-card.small  .case-img { aspect-ratio: 16 / 10; }   /* 小图：矮 */
-.case-card .case-info { padding: 14px 16px 16px; }
+.case-card.large  { grid-row: span 50; }   /* 大图：约 400px */
+.case-card.medium { grid-row: span 36; }   /* 中图：约 288px */
+.case-card.small  { grid-row: span 22; }   /* 小图：约 176px */
+.case-card .case-info { padding: 14px 16px 16px; flex: 0 0 auto; }
 .case-card .case-info h3 {
   margin: 0 0 6px;
   font-size: 1rem;
