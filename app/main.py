@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import BASE_DIR
-from app.routers import app_auth, app_dashboard, calculator, catalog, cost_estimate, library, projects, public, quotes, settings
+from app.routers import app_auth, app_dashboard, budget, calculator, catalog, cost_estimate, library, projects, public, quotes, settings
 
 app = FastAPI(title="Studio OS", version="1.0.0", docs_url=None, redoc_url=None)
 
@@ -47,18 +47,24 @@ app.include_router(quotes.router)
 app.include_router(catalog.router)
 app.include_router(calculator.router)
 app.include_router(cost_estimate.router)
+app.include_router(budget.router)
 app.include_router(settings.router)
 
 
 @app.on_event("startup")
-def _startup_ensure_account_columns() -> None:
-    """启动时幂等补齐 collaborators 的 username/avatar_url 列并回填登录名。
+def _startup_ensure_schema() -> None:
+    """启动时幂等建表 + 补齐 account 列，确保旧库一启动就拥有全部表结构。"""
+    try:
+        from app.init_db import init_schema
 
-    否则 authenticate_user 查询 username 列会因缺列而 500，进而无法登录、
-    无法进入设置页触发迁移，形成死锁。
-    """
+        init_schema()
+    except Exception as exc:  # noqa: BLE001
+        import logging
+
+        logging.getLogger("uvicorn.error").warning("建表跳过: %s", exc)
     try:
         from app.routers import settings as _settings
+
         _settings._ensure_account_columns()
     except Exception as exc:  # noqa: BLE001
         import logging

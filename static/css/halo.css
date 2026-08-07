@@ -22,11 +22,12 @@
   --color-text-muted: #5C6170;
   --color-text-faint: #3A3D4A;
 
-  /* Action */
-  --color-primary: #5B6BFF;
-  --color-primary-hover: #7886FF;
-  --color-primary-pressed: #4A59E6;
-  --color-focus: rgba(91, 107, 255, 0.35);
+  /* Action — 品牌同源：公开站绿黄签名色 */
+  --color-primary: #B6FF3C;
+  --color-primary-hover: #C8FF66;
+  --color-primary-pressed: #9DE62E;
+  --color-primary-ink: #0A0B0F;          /* 主色填充上的文字色（近黑，保证对比度） */
+  --color-focus: rgba(182, 255, 60, 0.35);
 
   /* Signal colors */
   --color-success: #2BE08C;
@@ -35,7 +36,7 @@
   --color-error: #FF3A5C;
 
   /* Soft signal backgrounds */
-  --color-primary-soft: rgba(91, 107, 255, 0.12);
+  --color-primary-soft: rgba(182, 255, 60, 0.12);
   --color-success-soft: rgba(43, 224, 140, 0.12);
   --color-warning-soft: rgba(245, 213, 71, 0.12);
   --color-info-soft: rgba(61, 215, 229, 0.12);
@@ -108,12 +109,68 @@
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(900px 500px at 85% -5%, rgba(91, 107, 255, 0.10), transparent 60%),
-    radial-gradient(700px 400px at -5% 20%, rgba(61, 215, 229, 0.06), transparent 60%);
+    radial-gradient(900px 500px at 85% -5%, rgba(182, 255, 60, 0.10), transparent 60%),
+    radial-gradient(700px 400px at -5% 20%, rgba(182, 255, 60, 0.04), transparent 60%);
 }
 
 .app-sidebar,
 .app-main {
+  position: relative;
+  z-index: 1;
+}
+
+/* ------------------------------------------------------------------------
+   Brand grain — 与公开站同源的极淡 SVG 噪点（feTurbulence）
+   公开站把颗粒压在深色 Hero 块上；后台则让整块画布与暗面板共享同一种质感，
+   使工具"长着工作室的脸"。颗粒置于内容之下、面板背景之上，不挡文字。
+   ------------------------------------------------------------------------ */
+.app-layout::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;                 /* 与辉光同层，位于内容(z-index:1)之下 */
+  pointer-events: none;
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxODAiIGhlaWdodD0iMTgwIj48ZmlsdGVyIGlkPSJuIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC44NSIgbnVtT2N0YXZlcz0iMiIgc3RpdGNoVGlsZXM9InN0aXRjaCIvPjxmZUNvbG9yTWF0cml4IHR5cGU9InNhdHVyYXRlIiB2YWx1ZXM9IjAiLz48L2ZpbHRlcj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWx0ZXI9InVybCgjbikiLz48L3N2Zz4=");
+  background-repeat: repeat;
+  background-size: 180px 180px;
+  opacity: 0.03;
+}
+
+/* 暗面板自身也带颗粒，与公开站"深色块=颗粒"规则一致 */
+.app-sidebar,
+.card,
+.stat-tile,
+.pipeline-col,
+.pipeline-item,
+.login-box {
+  isolation: isolate;
+}
+
+.app-sidebar::after,
+.card::after,
+.stat-tile::after,
+.pipeline-col::after,
+.pipeline-item::after,
+.login-box::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxODAiIGhlaWdodD0iMTgwIj48ZmlsdGVyIGlkPSJuIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC44NSIgbnVtT2N0YXZlcz0iMiIgc3RpdGNoVGlsZXM9InN0aXRjaCIvPjxmZUNvbG9yTWF0cml4IHR5cGU9InNhdHVyYXRlIiB2YWx1ZXM9IjAiLz48L2ZpbHRlcj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWx0ZXI9InVybCgjbikiLz48L3N2Zz4=");
+  background-repeat: repeat;
+  background-size: 180px 180px;
+  opacity: 0.04;
+}
+
+/* 把面板内前景内容抬到颗粒之上（z-index 仅在已定位元素上生效） */
+.app-sidebar > *,
+.card > *,
+.stat-tile > *,
+.pipeline-col > *,
+.pipeline-item > *,
+.login-box > * {
   position: relative;
   z-index: 1;
 }
@@ -229,7 +286,7 @@
   width: 32px;
   height: 32px;
   border-radius: var(--radius-full);
-  background: conic-gradient(from 200deg, var(--color-primary), var(--color-info), var(--color-primary));
+  background: conic-gradient(from 200deg, var(--color-primary), var(--color-text-muted), var(--color-primary));
   border: 1px solid var(--color-border-strong);
   flex-shrink: 0;
 }
@@ -351,7 +408,7 @@
 
 .btn-primary {
   background: var(--color-primary);
-  color: #fff !important;
+  color: var(--color-primary-ink) !important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.14);
 }
 .btn-primary:hover { background: var(--color-primary-hover); }
@@ -958,6 +1015,156 @@ textarea { min-height: 120px; padding: 12px 14px; resize: vertical; }
   padding-top: var(--space-3);
   border-top: 1px solid var(--color-border);
   margin-top: var(--space-3);
+}
+
+/* ------------------------------------------------------------------------
+   项目时间线（轻量甘特 / 横向时间轴）
+   纯 CSS 渲染，坐标由后端预计算（left%/width%），无外部图表库依赖
+   ------------------------------------------------------------------------ */
+.gantt { font-size: 0.8125rem; }
+
+.gantt__axis {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--color-text-muted);
+  margin-bottom: 10px;
+}
+.gantt__axis-range { color: var(--color-text-secondary); }
+
+/* 标签列（绝对定位）与轨道列（相对定位）分离，保证"今天"竖线与色块同坐标系 */
+.gantt__canvas { position: relative; padding-left: 132px; }
+.gantt__labels {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.gantt__label {
+  height: 26px;
+  display: flex;
+  align-items: center;
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gantt__tracks { position: relative; display: flex; flex-direction: column; gap: 8px; }
+.gantt__track {
+  position: relative;
+  height: 26px;
+  background: var(--color-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.gantt__bar {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  min-width: 10px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  font-size: 0.625rem;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  transition: filter var(--motion-base) var(--easing-standard);
+}
+.gantt__bar-label { opacity: 0.92; }
+
+/* 三态配色：进行中=绿黄高亮 / 完成=灰色 / 延期=琥珀；待开始=虚线轮廓 */
+.gantt__bar--done {
+  background: rgba(154, 160, 174, 0.22);
+  border: 1px solid var(--color-text-muted);
+  color: var(--color-text-secondary);
+}
+.gantt__bar--active {
+  background: var(--color-primary);
+  color: var(--color-primary-ink);
+  box-shadow: 0 0 14px rgba(182, 255, 60, 0.35);
+}
+.gantt__bar--delayed { background: var(--color-warning); color: var(--color-primary-ink); }
+.gantt__bar--upcoming {
+  background: transparent;
+  border: 1px dashed var(--color-border-strong);
+  color: var(--color-text-muted);
+}
+.gantt__bar--active:hover,
+.gantt__bar--delayed:hover { filter: brightness(1.08); }
+
+.gantt__today {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  background: var(--color-error);
+  opacity: 0.7;
+  z-index: 3;
+}
+.gantt__today::after {
+  content: "今天";
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.5625rem;
+  color: var(--color-error);
+  white-space: nowrap;
+}
+
+.gantt__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 14px;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+.gantt__legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.gantt__dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.gantt__dot--done { background: rgba(154, 160, 174, 0.22); border: 1px solid var(--color-text-muted); }
+.gantt__dot--active { background: var(--color-primary); }
+.gantt__dot--delayed { background: var(--color-warning); }
+.gantt__dot--upcoming { background: transparent; border: 1px dashed var(--color-border-strong); }
+
+/* 里程碑管理（管理员） */
+.ms-row { display: flex; gap: 8px; align-items: end; margin-bottom: 8px; }
+.ms-edit {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr auto;
+  gap: 8px;
+  flex: 1;
+  align-items: end;
+}
+.ms-edit input,
+.ms-edit select { height: 38px; }
+.ms-del {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-error);
+  border-radius: var(--radius-md);
+  width: 38px;
+  height: 38px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background var(--motion-base) var(--easing-standard), border-color var(--motion-base) var(--easing-standard);
+}
+.ms-del:hover { background: var(--color-error-soft); border-color: var(--color-error); }
+
+@media (max-width: 640px) {
+  .gantt__canvas { padding-left: 0; }
+  .gantt__labels { position: static; width: auto; flex-direction: row; flex-wrap: wrap; margin-bottom: 8px; }
+  .gantt__label { height: auto; }
+  .ms-edit { grid-template-columns: 1fr 1fr; }
+  .ms-row { flex-wrap: wrap; }
 }
 
 .fee-note {

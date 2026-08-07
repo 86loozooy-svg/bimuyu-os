@@ -223,6 +223,48 @@ CREATE TABLE IF NOT EXISTS space_presets (
   items_json TEXT NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS project_budget_item (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id    INTEGER NOT NULL,
+  name          TEXT    NOT NULL,
+  category      TEXT,
+  planned_amount REAL   NOT NULL DEFAULT 0,
+  sort_order    INTEGER DEFAULT 0,
+  created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (project_id) REFERENCES projects(id)
+);
+
+CREATE TABLE IF NOT EXISTS project_expense (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id     INTEGER NOT NULL,
+  budget_item_id INTEGER,
+  amount         REAL    NOT NULL,
+  payee          TEXT,
+  occurred_date  DATE,
+  note           TEXT,
+  attachment_path TEXT,
+  created_by     INTEGER,
+  created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (project_id) REFERENCES projects(id)
+);
+
+CREATE TABLE IF NOT EXISTS project_material (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id    INTEGER NOT NULL,
+  name          TEXT    NOT NULL,
+  brand         TEXT,
+  spec          TEXT,
+  quantity      REAL    DEFAULT 1,
+  unit          TEXT,
+  unit_price    REAL    DEFAULT 0,
+  category      TEXT,
+  purchase_stage TEXT,
+  status        TEXT    DEFAULT 'pending',
+  sort_order    INTEGER DEFAULT 0,
+  created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (project_id) REFERENCES projects(id)
+);
 """
 
 

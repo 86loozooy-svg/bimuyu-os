@@ -437,3 +437,75 @@ async def mark_cost_sample(
     return RedirectResponse(
         f"/app/projects/{project_id}?tab=overview&marked=1", status_code=303
     )
+
+
+# ── 造价 → 项目预算：把分项写入 project_budget_item 作为初始预算 ────────────
+@router.post("/api/cost-estimate/save-to-budget")
+async def save_estimate_to_budget(request: Request, user: dict = Depends(get_current_user)):
+    """智能造价结果保存为项目初始预算。
+
+    将中档总价拆解为「基础工程」+ 各材质分类分项，写入 project_budget_item。
+    保存幂等：先清空该项目旧预算分项（关联开销 budget_item_id 置空、流水保留）。
+    """
+    try:
+        payload = await request.json()
+    except Exception:
+        return JSONResponse({"error": "请求体需为 JSON"}, status_code=400)
+
+    try:
+        project_id = int(payload.get("project_id"))
+    except (TypeError, ValueError):
+        return JSONResponse({"error": "project_id 必填且为整数"}, status_code=400)
+    survey = payload.get("survey", {})
+    if not user_can_access_project(user, project_id):
+        return JSONResponse({"error": "无权访问该项目"}, status_code=403)
+    if user["role"] == "viewer":
+        return JSONResponse({"error": "访客无编辑权限"}, status_code=403)
+    if not (survey.get("type") and survey.get("area")):
+        return JSONResponse({"error": "缺少造价调查（type/area）"}, status_code=400)
+
+    base = load_cost_base()
+    history = load_history()
+    result = run_estimate(survey, base, history)
+    tiers = result["tiers"]
+    bd = result["breakdown"]
+    area = float(result.get("area") or 0)
+    service_cov = float(bd.get("service_cov", 1.0))
+
+    base_part = (
+        bd.get("base_per_sqm", 0)
+        * bd.get("city_mult", 1.0)
+        * bd.get("old_mult", 1.0)
+        * bd.get("fh_factor", 1.0)
+        * bd.get("zone_factor", 1.0)
+        * area
+        * service_cov
+    )
+    # 分项：基础工程 + 每个材质分类（按该分类加价和拆分）
+    items = [("基础工程", "基础", round(base_part))]
+    for cat_key, opts in (bd.get("materials") or {}).items():
+        cat_sum = sum(float(v) for v in opts.values())
+        planned = round(cat_sum * area * service_cov)
+        if planned > 0:
+            items.append((cat_key, cat_key, planned))
+
+    with db_session() as conn:
+        conn.execute(
+            "UPDATE project_expense SET budget_item_id=NULL WHERE project_id=?", (project_id,)
+        )
+        conn.execute("DELETE FROM project_budget_item WHERE project_id=?", (project_id,))
+        for idx, (name, category, planned) in enumerate(items, 1):
+            conn.execute(
+                "INSERT INTO project_budget_item (project_id, name, category, planned_amount, sort_order) "
+                "VALUES (?,?,?,?,?)",
+                (project_id, name, category, planned, idx),
+            )
+
+    return JSONResponse(
+        {
+            "ok": True,
+            "items": len(items),
+            "mid_total": tiers["mid"]["total"],
+            "redirect": f"/app/projects/{project_id}?tab=overview",
+        }
+    )

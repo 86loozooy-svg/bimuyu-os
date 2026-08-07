@@ -1,0 +1,90 @@
+/* Studio OS — 预算追踪 & 物料清单 BOM（独立样式，避免修改全局 halo.css） */
+.budget-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+.budget-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  background: var(--color-elevated);
+}
+.budget-card.over { border-color: #ff6b6b; }
+.budget-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+  gap: 8px;
+}
+.budget-card__name { font-weight: 600; color: var(--color-text, #E8E6E1); }
+.budget-card__cat { font-size: .72rem; color: var(--color-text-secondary); }
+.budget-card__row {
+  display: flex;
+  justify-content: space-between;
+  font-size: .85rem;
+  margin-bottom: 4px;
+  color: var(--color-text-secondary);
+}
+.budget-card__bar {
+  height: 6px;
+  background: rgba(99, 97, 90, .35);
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 8px 0 4px;
+}
+.budget-card__fill { height: 100%; background: #c8ff00; }
+.budget-card__pct { font-size: .72rem; color: var(--color-text-secondary); }
+.budget-card__pct.over { color: #ff6b6b; }
+.bc-btn {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: .72rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+.bc-btn:hover { color: #c8ff00; border-color: #c8ff00; }
+.bc-del { color: #ff6b6b; border-color: transparent; }
+.bc-del:hover { color: #ff6b6b; border-color: #ff6b6b; }
+.bm-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.bm-modal__box {
+  background: var(--color-elevated, #1E2029);
+  border: 1px solid var(--color-border, #2A2D38);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  width: min(440px, 92vw);
+  max-height: 88vh;
+  overflow: auto;
+}
+.bm-modal__title { font-weight: 600; margin-bottom: 12px; color: var(--color-text, #E8E6E1); }
+.bm-modal__foot { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .85rem;
+  color: var(--color-text, #E8E6E1);
+}
+.data-table th, .data-table td {
+  border: 1px solid var(--color-border);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+.data-table th {
+  background: rgba(99, 97, 90, .25);
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+.table-responsive { overflow-x: auto; }

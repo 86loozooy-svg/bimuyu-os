@@ -1,5 +1,6 @@
 {% extends "app/base.html" %}
 {% block title %}{{ project.name }} — Studio OS{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="/static/css/bom_budget.css">{% endblock %}
 {% block content %}
 <div class="app-header">
   <div>
@@ -19,6 +20,7 @@
   <a class="tab {% if tab == 'quote' %}active{% endif %}" href="?tab=quote">报价</a>
   {% endif %}
   <a class="tab {% if tab == 'execution' %}active{% endif %}" href="?tab=execution">执行</a>
+  <a class="tab {% if tab == 'materials' %}active{% endif %}" href="?tab=materials">物料清单</a>
   {% if show_finance %}
   <a class="tab {% if tab == 'finance' %}active{% endif %}" href="?tab=finance">财务 🔒</a>
   {% endif %}
@@ -227,6 +229,21 @@
   </div>
   {% endif %}
 </div>
+
+  {# ── 预算追踪区块 ── #}
+  <div class="card" style="margin-top:18px" id="budgetTracker" data-project-id="{{ project.id }}">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <h3 style="margin:0">预算追踪</h3>
+      <div style="display:flex;gap:8px">
+        <button type="button" class="btn btn-outline" id="addBudgetItemBtn" style="padding:6px 12px;font-size:.8rem">+ 预算分项</button>
+      </div>
+    </div>
+    <div id="budgetSummary" style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:14px;font-size:.85rem"></div>
+    <div id="budgetCards" class="budget-cards"></div>
+    <div style="margin-top:18px"><canvas id="budgetChart" height="130"></canvas></div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="/static/js/budget_tracker.js"></script>
 
 {% elif tab == 'brief' %}
 <div class="card">
@@ -672,6 +689,29 @@ loadCatalogAndPresets();
   {% endfor %}
 </div>
 {% endif %}
+
+{% elif tab == 'materials' %}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+    <h3 style="margin:0">物料清单 (BOM)</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button type="button" class="btn btn-outline" id="genFromCostBtn" style="padding:6px 12px;font-size:.8rem">从造价生成草稿</button>
+      <button type="button" class="btn btn-outline" id="exportExcelBtn" style="padding:6px 12px;font-size:.8rem">导出 Excel</button>
+      <button type="button" class="btn btn-outline" id="exportPdfBtn" style="padding:6px 12px;font-size:.8rem">导出 PDF</button>
+      <button type="button" class="btn" id="addMaterialBtn" style="padding:6px 12px;font-size:.8rem">+ 物料</button>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="data-table" id="bomTable">
+      <thead><tr>
+        <th>名称</th><th>品牌</th><th>规格</th><th>数量</th><th>单位</th>
+        <th>单价(¥)</th><th>小计(¥)</th><th>分类</th><th>购买节点</th><th>状态</th><th></th>
+      </tr></thead>
+      <tbody id="bomBody"></tbody>
+    </table>
+  </div>
+</div>
+<script src="/static/js/bom_manager.js"></script>
 
 {% elif tab == 'execution' %}
 <div class="card">
