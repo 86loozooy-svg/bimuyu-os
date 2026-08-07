@@ -1,33 +1,54 @@
 import json
 import secrets
-import shutil
 import uuid
 from datetime import datetime, timedelta
-from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from app.auth import hash_password, log_audit, require_admin
+from app.auth import hash_password, log_audit, require_admin, verify_password
 from app.config import BASE_DIR, CONTACT_PATH, DATA_DIR
 from app.database import db_session, row_to_dict, rows_to_list
 
 UPLOAD_DIR = BASE_DIR / "static" / "uploads"
-ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg"}
+IMAGE_MAX_BYTES = 5 * 1024 * 1024  # 图片上传上限 5MB
+ALLOWED_IMAGE_TYPES = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+}
 
 
-def save_upload_file(upload: UploadFile) -> str:
-    """Save an uploaded image to static/uploads/ and return the URL path."""
-    ext = Path(upload.filename or "").suffix.lower()
-    if ext not in ALLOWED_EXTENSIONS:
-        ext = ".jpg"
+async def save_upload_file(upload: UploadFile, subdir: str = "") -> str:
+    """接收图片上传：校验大小/类型，UUID 重命名后保存到 static/uploads/<subdir>/，返回 URL 路径。"""
+    content = await upload.read()
+    size = len(content)
+    if size == 0:
+        raise HTTPException(status_code=400, detail="空文件")
+    if size > IMAGE_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="文件过大，请上传 ≤5MB 的图片")
+    mime = _detect_image_type(content)
+    if mime is None:
+        raise HTTPException(status_code=400, detail="仅支持 JPG / PNG / WebP 格式")
+    ext = ALLOWED_IMAGE_TYPES[mime]
     filename = f"{uuid.uuid4().hex}{ext}"
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    dest = UPLOAD_DIR / filename
-    with dest.open("wb") as f:
-        shutil.copyfileobj(upload.file, f)
-    return f"/static/uploads/{filename}"
+    target_dir = UPLOAD_DIR / subdir if subdir else UPLOAD_DIR
+    target_dir.mkdir(parents=True, exist_ok=True)
+    dest = target_dir / filename
+    dest.write_bytes(content)
+    return f"/static/uploads/{subdir}/{filename}" if subdir else f"/static/uploads/{filename}"
+
+
+def _detect_image_type(content: bytes):
+    """按文件头(magic bytes)识别真实图片类型，防止改扩展名绕过校验。"""
+    if content.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if content.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if content.startswith(b"RIFF") and b"WEBP" in content[:16]:
+        return "image/webp"
+    return None
 
 router = APIRouter(prefix="/app/settings", tags=["settings"])
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -40,7 +61,8 @@ def load_contact() -> dict:
 
 
 @router.get("", response_class=HTMLResponse)
-async def settings_index(request: Request, user: dict = Depends(require_admin), tab: str = "profile"):
+async def settings_index(request: Request, user: dict = Depends(require_admin),     tab: str = "profile"):
+    _ensure_account_columns()
     with db_session() as conn:
         studio = row_to_dict(conn.execute("SELECT * FROM studio_profile WHERE id = 1").fetchone())
         collaborators = rows_to_list(
@@ -128,6 +150,151 @@ async def save_profile(
         )
     log_audit(user["id"], "update", "studio_profile", 1)
     return RedirectResponse(url="/app/settings?tab=profile", status_code=303)
+
+
+# ----------------------------------------------------------------------------
+# 个人账户管理：头像上传、资料更新、修改密码
+# collaborators.avatar_url / username 由 _ensure_account_columns 在首次访问时
+# 幂等补齐并回填，避免依赖外部迁移脚本（username 与 email 解耦、可独立登录）。
+# ----------------------------------------------------------------------------
+_account_columns_ready = False
+
+
+def _ensure_account_columns() -> None:
+    """幂等地确保 collaborators 表存在 avatar_url / username 列，并为已有账号回填唯一 username。"""
+    global _account_columns_ready
+    if _account_columns_ready:
+        return
+    with db_session() as conn:
+        cols = {r["name"] for r in conn.execute("PRAGMA table_info(collaborators)").fetchall()}
+        if "avatar_url" not in cols:
+            conn.execute("ALTER TABLE collaborators ADD COLUMN avatar_url TEXT")
+        if "username" not in cols:
+            conn.execute("ALTER TABLE collaborators ADD COLUMN username TEXT")
+        # 为已有账号回填唯一 username（取邮箱@前部分，冲突则追加数字）
+        rows = conn.execute(
+            "SELECT id, email, username FROM collaborators "
+            "WHERE username IS NULL OR username = ''"
+        ).fetchall()
+        for r in rows:
+            base = (r["email"].split("@")[0] if r["email"] else f"user{r['id']}") or f"user{r['id']}"
+            uname = base
+            i = 1
+            while conn.execute(
+                "SELECT 1 FROM collaborators WHERE username = ? AND id != ?",
+                (uname, r["id"]),
+            ).fetchone():
+                i += 1
+                uname = f"{base}{i}"
+            conn.execute(
+                "UPDATE collaborators SET username = ? WHERE id = ?", (uname, r["id"])
+            )
+    _account_columns_ready = True
+
+
+@router.post("/account/avatar")
+async def upload_avatar(
+    user: dict = Depends(require_admin),
+    avatar: UploadFile = File(...),
+):
+    _ensure_account_columns()
+    image_path = await save_upload_file(avatar, subdir="avatars")
+    with db_session() as conn:
+        conn.execute(
+            "UPDATE collaborators SET avatar_url = ? WHERE id = ?",
+            (image_path, user["id"]),
+        )
+    log_audit(user["id"], "update", "collaborator", user["id"], f"avatar: {image_path}")
+    # cropper-upload.js 在 fetch 成功后 window.location.reload()，这里返回 303 即可
+    return RedirectResponse(url="/app/settings?tab=account", status_code=303)
+
+
+@router.post("/account/profile")
+async def update_account_profile(
+    user: dict = Depends(require_admin),
+    display_name: str = Form(""),
+    username: str = Form(""),
+    email: str = Form(""),
+):
+    _ensure_account_columns()
+    username = (username or "").strip()
+    email = (email or "").strip()
+    display_name = (display_name or "").strip()
+    if not username:
+        return RedirectResponse(
+            url="/app/settings?tab=account&err=" + _url("登录名不能为空"),
+            status_code=303,
+        )
+    if not email or "@" not in email:
+        return RedirectResponse(
+            url="/app/settings?tab=account&err=" + _url("邮箱不能为空且需包含 @"),
+            status_code=303,
+        )
+    with db_session() as conn:
+        # 登录名唯一性校验（排除自己）
+        dup_u = conn.execute(
+            "SELECT id FROM collaborators WHERE username = ? AND id != ?",
+            (username, user["id"]),
+        ).fetchone()
+        if dup_u:
+            return RedirectResponse(
+                url="/app/settings?tab=account&err=" + _url("该登录名已被其他成员占用"),
+                status_code=303,
+            )
+        # 邮箱唯一性校验（排除自己）
+        dup_e = conn.execute(
+            "SELECT id FROM collaborators WHERE email = ? AND id != ?",
+            (email, user["id"]),
+        ).fetchone()
+        if dup_e:
+            return RedirectResponse(
+                url="/app/settings?tab=account&err=" + _url("该邮箱已被其他成员占用"),
+                status_code=303,
+            )
+        conn.execute(
+            "UPDATE collaborators SET display_name = ?, username = ?, email = ? WHERE id = ?",
+            (display_name, username, email, user["id"]),
+        )
+    log_audit(user["id"], "update", "collaborator", user["id"], "profile")
+    return RedirectResponse(url="/app/settings?tab=account&ok=" + _url("资料已保存"), status_code=303)
+
+
+@router.post("/account/password")
+async def change_account_password(
+    user: dict = Depends(require_admin),
+    current_password: str = Form(""),
+    new_password: str = Form(""),
+    confirm_password: str = Form(""),
+):
+    _ensure_account_columns()
+    if not verify_password(current_password, user["password_hash"]):
+        return RedirectResponse(
+            url="/app/settings?tab=account&err=" + _url("原密码错误"),
+            status_code=303,
+        )
+    if len(new_password) < 6:
+        return RedirectResponse(
+            url="/app/settings?tab=account&err=" + _url("新密码至少 6 位"),
+            status_code=303,
+        )
+    if new_password != confirm_password:
+        return RedirectResponse(
+            url="/app/settings?tab=account&err=" + _url("两次输入的新密码不一致"),
+            status_code=303,
+        )
+    with db_session() as conn:
+        conn.execute(
+            "UPDATE collaborators SET password_hash = ? WHERE id = ?",
+            (hash_password(new_password), user["id"]),
+        )
+    log_audit(user["id"], "update", "collaborator", user["id"], "password changed")
+    return RedirectResponse(url="/app/settings?tab=account&ok=" + _url("密码已修改"), status_code=303)
+
+
+def _url(text: str) -> str:
+    from urllib.parse import quote
+
+    return quote(text)
 
 
 @router.post("/contact")
@@ -236,7 +403,7 @@ async def upload_cover(
     user: dict = Depends(require_admin),
     cover: UploadFile = File(...),
 ):
-    image_path = save_upload_file(cover)
+    image_path = await save_upload_file(cover)
     with db_session() as conn:
         conn.execute("UPDATE cases SET cover_image=? WHERE id=?", (image_path, case_id))
     log_audit(user["id"], "update", "case", case_id, f"cover: {image_path}")
@@ -250,7 +417,7 @@ async def add_case_image(
     image: UploadFile = File(...),
     caption: str = Form(""),
 ):
-    image_path = save_upload_file(image)
+    image_path = await save_upload_file(image)
     with db_session() as conn:
         max_order = conn.execute(
             "SELECT COALESCE(MAX(sort_order), 0) FROM case_images WHERE case_id=?",
@@ -334,12 +501,13 @@ async def invite_collaborator(
         else:
             conn.execute(
                 """
-                INSERT INTO collaborators (email, password_hash, display_name, role,
+                INSERT INTO collaborators (email, username, password_hash, display_name, role,
                 project_ids, invited_by, invited_at, expires_at, token)
-                VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)
                 """,
                 (
                     email.strip(),
+                    email.strip().split("@")[0],
                     hash_password(temp_password),
                     display_name,
                     role,
@@ -425,7 +593,7 @@ async def upload_biz_image(
     user: dict = Depends(require_admin),
     image: UploadFile = File(...),
 ):
-    image_path = save_upload_file(image)
+    image_path = await save_upload_file(image)
     with db_session() as conn:
         conn.execute("UPDATE site_config SET value=? WHERE key='biz_image'", (image_path,))
     log_audit(user["id"], "update", "site_config", 0, f"biz_image: {image_path}")
@@ -454,7 +622,7 @@ async def upload_client_logo(
     user: dict = Depends(require_admin),
     logo: UploadFile = File(...),
 ):
-    image_path = save_upload_file(logo)
+    image_path = await save_upload_file(logo)
     with db_session() as conn:
         conn.execute("UPDATE site_client_logos SET logo_path=? WHERE id=?", (image_path, logo_id))
     return RedirectResponse(url="/app/settings?tab=homepage", status_code=303)

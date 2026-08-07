@@ -8,6 +8,7 @@
   <a class="tab {% if tab == 'members' %}active{% endif %}" href="?tab=members">成员与权限</a>
   <a class="tab {% if tab == 'homepage' %}active{% endif %}" href="?tab=homepage">首页内容</a>
   <a class="tab {% if tab == 'public' %}active{% endif %}" href="?tab=public">公开站管理</a>
+  <a class="tab {% if tab == 'account' %}active{% endif %}" href="?tab=account">账户</a>
   <a class="tab" href="/app/settings/ai-cost">智能造价·AI</a>
 </div>
 
@@ -280,5 +281,63 @@
   </form>
 </div>
 {% endif %}
+{% elif tab == 'account' %}
+{% if request.query_params.get('ok') %}
+<div class="card" style="background:var(--color-success-soft);border-color:rgba(43,224,140,0.22)">
+  <p style="color:var(--color-success)">{{ request.query_params.get('ok') }}</p>
+</div>
+{% endif %}
+{% if request.query_params.get('err') %}
+<div class="card" style="background:rgba(192,57,43,0.12);border-color:rgba(192,57,43,0.4)">
+  <p style="color:#e74c3c">{{ request.query_params.get('err') }}</p>
+</div>
+{% endif %}
+
+<!-- 个人资料 -->
+<div class="card">
+  <h3 style="margin-bottom:8px">个人资料</h3>
+  <p style="color:var(--muted);font-size:.85rem;margin-bottom:20px">管理你的头像、显示名、登录名与邮箱。登录名与邮箱彼此独立，均可用于登录。</p>
+  <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
+    <div style="text-align:center">
+      {% if user.avatar_url %}
+      <img src="{{ user.avatar_url }}" alt="头像" style="width:108px;height:108px;border-radius:50%;object-fit:cover;border:2px solid #63615A">
+      {% else %}
+      <div style="width:108px;height:108px;border-radius:50%;background:#63615A;display:flex;align-items:center;justify-content:center;color:#fff;font-size:2rem;font-weight:600">{{ (user.display_name or user.email)[0:1] | upper }}</div>
+      {% endif %}
+      <form method="post" action="/app/settings/account/avatar" enctype="multipart/form-data" style="margin-top:12px">
+        <div class="form-group" style="margin:0">
+          <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp" data-crop data-ratio="1/1" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="margin-top:10px;width:100%">上传头像</button>
+        <div class="upload-hint" style="margin-top:10px;text-align:left">
+          <div class="hint-row"><span class="hint-tag"><strong>比例</strong> 1:1</span><span class="hint-tag"><strong>格式</strong> JPG / PNG / WebP</span></div>
+          <div class="hint-note">选择图片后可在弹窗中拖动裁剪，确认后自动上传并更新。</div>
+        </div>
+      </form>
+    </div>
+    <form method="post" action="/app/settings/account/profile" style="flex:1;min-width:260px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="form-group"><label>显示名</label><input name="display_name" value="{{ user.display_name or '' }}" placeholder="如：王设计师"></div>
+      <div class="form-group"><label>登录名</label><input name="username" value="{{ user.username or '' }}" required placeholder="用于登录，与邮箱独立"><div style="font-size:.75rem;color:var(--muted);margin-top:4px">可含字母、数字、_ 与 .，修改后需用新登录名登录。</div></div>
+      <div class="form-group"><label>邮箱</label><input type="email" name="email" value="{{ user.email or '' }}" required placeholder="用于邀请与通知"></div>
+      <div class="form-group" style="grid-column:1/-1;display:flex;justify-content:flex-end">
+        <button type="submit" class="btn btn-primary">保存资料</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 安全设置 -->
+<div class="card">
+  <h3 style="margin-bottom:8px">安全设置</h3>
+  <p style="color:var(--muted);font-size:.85rem;margin-bottom:20px">修改登录密码，修改后需使用新密码登录。</p>
+  <form method="post" action="/app/settings/account/password" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:640px">
+    <div class="form-group" style="grid-column:1/-1"><label>原密码</label><input type="password" name="current_password" autocomplete="current-password" required></div>
+    <div class="form-group"><label>新密码</label><input type="password" name="new_password" autocomplete="new-password" required></div>
+    <div class="form-group"><label>确认新密码</label><input type="password" name="confirm_password" autocomplete="new-password" required></div>
+      <div class="form-group" style="grid-column:1/-1;display:flex;justify-content:flex-end">
+        <button type="submit" class="btn btn-primary">修改密码</button>
+      </div>
+  </form>
+</div>
 {% endif %}
 {% endblock %}

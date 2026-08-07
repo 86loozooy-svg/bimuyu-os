@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/style.css">
   <link rel="stylesheet" href="/static/css/halo.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
   <script src="https://unpkg.com/lucide@latest" defer></script>
 </head>
 <body>
@@ -87,9 +88,13 @@
 
       <div class="sidebar-footer">
         <div class="sidebar-user">
-          <span class="user-avatar" aria-hidden="true"></span>
+          {% if user.avatar_url %}
+          <img class="user-avatar" src="{{ user.avatar_url }}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover">
+          {% else %}
+          <span class="user-avatar" aria-hidden="true">{{ (user.display_name or user.username or user.email)[0:1] | upper }}</span>
+          {% endif %}
           <div class="user-info">
-            <span class="user-name">{{ user.display_name or user.email }}</span>
+            <span class="user-name">{{ user.display_name or user.username or user.email }}</span>
             <span class="user-role">{{ user.role or 'member' }}</span>
           </div>
         </div>
@@ -104,6 +109,27 @@
       {% block content %}{% endblock %}
     </main>
   </div>
+
+  <!-- ===== 全局图片裁切模态框（Cropper.js，CDN 引入，不引入构建工具） ===== -->
+  <div id="cropper-modal" class="cropper-modal" hidden>
+    <div class="cropper-modal__content">
+      <div class="cropper-modal__header">
+        <span>调整裁剪区域</span>
+        <button type="button" class="cropper-close" aria-label="关闭">&times;</button>
+      </div>
+      <div class="cropper-modal__body">
+        <img id="cropper-img" src="" alt="">
+      </div>
+      <div class="cropper-modal__footer">
+        <span class="cropper-modal__error" role="alert"></span>
+        <button type="button" class="btn btn-outline cropper-cancel">取消</button>
+        <button type="button" class="btn btn-primary cropper-confirm">确认并上传</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+  <script src="/static/js/cropper-upload.js"></script>
 
   <script>
     document.addEventListener('DOMContentLoaded', function() {

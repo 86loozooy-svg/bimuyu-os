@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS studio_profile (
 CREATE TABLE IF NOT EXISTS collaborators (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   email TEXT UNIQUE NOT NULL,
+  username TEXT,
   password_hash TEXT NOT NULL,
   display_name TEXT,
   role TEXT DEFAULT 'viewer',
@@ -45,7 +46,8 @@ CREATE TABLE IF NOT EXISTS collaborators (
   expires_at DATETIME,
   last_access_at DATETIME,
   revoked BOOLEAN DEFAULT FALSE,
-  token TEXT
+  token TEXT,
+  avatar_url TEXT
 );
 
 CREATE TABLE IF NOT EXISTS audit_log (
@@ -231,6 +233,98 @@ def init_schema() -> None:
     conn.close()
 
 
+def _add_columns(conn, table: str, cols: dict) -> None:
+    """Add columns if they do not already exist (idempotent, SQLite safe)."""
+    existing = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+    for name, definition in cols.items():
+        if name not in existing:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {definition}")
+
+
+def _migrate_schema() -> None:
+    """Idempotent column migrations for databases created before this version.
+
+    Adds designer fields to projects and duration/status fields to
+    project_milestones, then backfills existing milestones so the Gantt
+    timeline has real data immediately.
+    """
+    conn = get_connection()
+    try:
+        _add_columns(
+            conn,
+            "projects",
+            {
+                "lead_designer": "TEXT",
+                "assistant_designer": "TEXT",
+                "construction_lead": "TEXT",
+            },
+        )
+        _add_columns(
+            conn,
+            "project_milestones",
+            {
+                "start_date": "DATE",
+                "end_date": "DATE",
+                "status": "TEXT DEFAULT 'todo'",
+            },
+        )
+        _add_columns(
+            conn,
+            "collaborators",
+            {
+                "avatar_url": "TEXT",
+                "username": "TEXT",
+            },
+        )
+
+        # 回灌已有里程碑：补齐 start/end/status，让甘特图立刻可见。
+        # 注意：status 列默认值 'todo' 代表「尚未推断」，需按真实状态重算，
+        # 不能把它当成已有状态而短路后续判断。
+        today = date.today().isoformat()
+        rows = conn.execute(
+            "SELECT id, project_id, due_date, done, start_date, end_date, status "
+            "FROM project_milestones "
+            "WHERE start_date IS NULL OR end_date IS NULL OR status IS NULL "
+            "OR status = '' OR status = 'todo'"
+        ).fetchall()
+        for r in rows:
+            mid = r["id"]
+            pid = r["project_id"]
+            due = r["due_date"]
+            done = r["done"]
+            start = r["start_date"]
+            end = r["end_date"]
+            st = r["status"]
+            proj = conn.execute(
+                "SELECT start_date, deadline FROM projects WHERE id = ?", (pid,)
+            ).fetchone()
+            proj_start = proj["start_date"] if proj else None
+
+            end = end or due or (date.today() + timedelta(days=14)).isoformat()
+            # start 为空、或为旧兜底值（等于项目起始日）时，按 end-7d 重算，
+            # 避免所有条都从同一天开始。
+            if not start or start == proj_start:
+                start = (date.fromisoformat(end) - timedelta(days=7)).isoformat()
+            # 推断真实状态：'todo' 视为未推断，按 done / 延期 / 未开始 判定
+            if st and st != "" and st != "todo":
+                status = st
+            elif done:
+                status = "done"
+            elif end < today:
+                status = "delayed"
+            elif start > today:
+                status = "upcoming"
+            else:
+                status = "active"
+            conn.execute(
+                "UPDATE project_milestones SET start_date = ?, end_date = ?, status = ? WHERE id = ?",
+                (start, end, status, mid),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def seed_data() -> None:
     with db_session() as conn:
         if conn.execute("SELECT COUNT(*) FROM studio_profile").fetchone()[0] == 0:
@@ -280,14 +374,20 @@ def seed_data() -> None:
             )
             conn.execute(
                 """
-                INSERT INTO project_milestones (project_id, name, due_date, done)
-                VALUES (1, '方案初稿', ?, 1),
-                       (1, '施工图', ?, 0),
-                       (1, '现场交底', ?, 0)
+                INSERT INTO project_milestones (project_id, name, start_date, due_date, end_date, done, status)
+                VALUES (1, '方案初稿', ?, ?, ?, 1, 'done'),
+                       (1, '施工图', ?, ?, ?, 0, 'active'),
+                       (1, '现场交底', ?, ?, ?, 0, 'upcoming')
                 """,
                 (
+                    (date.today() - timedelta(days=21)).isoformat(),
+                    (date.today() - timedelta(days=7)).isoformat(),
+                    (date.today() - timedelta(days=7)).isoformat(),
                     (date.today() - timedelta(days=7)).isoformat(),
                     (date.today() + timedelta(days=14)).isoformat(),
+                    (date.today() + timedelta(days=14)).isoformat(),
+                    (date.today() + timedelta(days=14)).isoformat(),
+                    (date.today() + timedelta(days=30)).isoformat(),
                     (date.today() + timedelta(days=30)).isoformat(),
                 ),
             )
@@ -544,6 +644,7 @@ def ensure_data_dirs() -> None:
 def main() -> None:
     ensure_data_dirs()
     init_schema()
+    _migrate_schema()
     seed_data()
     print("✓ 数据库初始化完成")
     print(f"  路径: {BASE_DIR / 'data' / 'db' / 'studio.db'}")

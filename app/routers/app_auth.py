@@ -23,14 +23,14 @@ async def login_page(request: Request):
 @router.post("/login")
 async def login_submit(
     response: Response,
-    email: str = Form(...),
+    identifier: str = Form(...),
     password: str = Form(...),
 ):
-    user = authenticate_user(email.strip(), password)
+    user = authenticate_user(identifier.strip(), password)
     if not user:
         return templates.TemplateResponse(
             "app/login.html",
-            {"request": {}, "error": "邮箱或密码错误"},
+            {"request": {}, "error": "邮箱/登录名或密码错误"},
             status_code=400,
         )
     token = create_access_token({"sub": str(user["id"]), "role": user["role"]})

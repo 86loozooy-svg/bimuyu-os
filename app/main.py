@@ -50,6 +50,21 @@ app.include_router(cost_estimate.router)
 app.include_router(settings.router)
 
 
+@app.on_event("startup")
+def _startup_ensure_account_columns() -> None:
+    """启动时幂等补齐 collaborators 的 username/avatar_url 列并回填登录名。
+
+    否则 authenticate_user 查询 username 列会因缺列而 500，进而无法登录、
+    无法进入设置页触发迁移，形成死锁。
+    """
+    try:
+        from app.routers import settings as _settings
+        _settings._ensure_account_columns()
+    except Exception as exc:  # noqa: BLE001
+        import logging
+        logging.getLogger("uvicorn.error").warning("账号列迁移跳过: %s", exc)
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}

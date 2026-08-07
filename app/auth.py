@@ -1,4 +1,5 @@
 import json
+import sqlite3
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -52,8 +53,22 @@ def get_user_by_id(user_id: int) -> dict | None:
         return row_to_dict(row)
 
 
-def authenticate_user(email: str, password: str) -> dict | None:
-    user = get_user_by_email(email)
+def authenticate_user(identifier: str, password: str) -> dict | None:
+    """按邮箱或登录名(username)校验身份，二者解耦、皆可登录。"""
+    identifier = (identifier or "").strip()
+    with db_session() as conn:
+        try:
+            row = conn.execute(
+                "SELECT * FROM collaborators WHERE (email = ? OR username = ?) AND revoked = 0",
+                (identifier, identifier),
+            ).fetchone()
+        except sqlite3.OperationalError:
+            # 旧库尚未迁移 username 列：降级为仅按邮箱校验，避免 500 死锁
+            row = conn.execute(
+                "SELECT * FROM collaborators WHERE email = ? AND revoked = 0",
+                (identifier,),
+            ).fetchone()
+        user = row_to_dict(row)
     if not user or not verify_password(password, user["password_hash"]):
         return None
     if user.get("expires_at"):
