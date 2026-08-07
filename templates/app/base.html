@@ -28,6 +28,7 @@
             <a href="/app/" {% if request.url.path == '/app/' %}class="active"{% endif %}>
               <i data-lucide="layout-dashboard"></i>
               Dashboard
+              <span class="nav-badge" id="todoBadge" hidden></span>
             </a>
           </li>
           <li>
@@ -69,6 +70,12 @@
 
           {% if user and user.role == 'admin' %}
           <li class="nav-section">管理</li>
+          <li>
+            <a href="/app/workers" {% if '/workers' in request.url.path %}class="active"{% endif %}>
+              <i data-lucide="users"></i>
+              工人通讯录
+            </a>
+          </li>
           <li>
             <a href="/app/settings" {% if '/settings' in request.url.path %}class="active"{% endif %}>
               <i data-lucide="settings-2"></i>
@@ -135,6 +142,24 @@
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       if (window.lucide && lucide.createIcons) lucide.createIcons();
+
+      // 站内红点：到期未完成任务数（未配置外部推送时的主要提醒入口）
+      if (!window.location.pathname.startsWith('/app/login')) {
+        fetch('/app/tasks/count')
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (d) {
+            if (!d) return;
+            var badge = document.getElementById('todoBadge');
+            if (!badge) return;
+            if (d.pending_today > 0) {
+              badge.textContent = d.pending_today > 99 ? '99+' : d.pending_today;
+              badge.hidden = false;
+            } else {
+              badge.hidden = true;
+            }
+          })
+          .catch(function () {});
+      }
     });
   </script>
 </body>

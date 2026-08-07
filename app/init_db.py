@@ -265,6 +265,54 @@ CREATE TABLE IF NOT EXISTS project_material (
   created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (project_id) REFERENCES projects(id)
 );
+
+CREATE TABLE IF NOT EXISTS worker (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  name          TEXT    NOT NULL,
+  role          TEXT,
+  phone         TEXT,
+  wechat        TEXT,
+  id_number     TEXT,
+  daily_rate    REAL    DEFAULT 0,
+  company       TEXT,
+  status        TEXT    DEFAULT 'active',
+  notes         TEXT,
+  created_at    DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS project_assignment (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id    INTEGER NOT NULL,
+  worker_id     INTEGER NOT NULL,
+  role_on_project TEXT,
+  is_lead       INTEGER DEFAULT 0,
+  start_date    DATE,
+  end_date      DATE,
+  status        TEXT    DEFAULT 'planned',
+  notes         TEXT,
+  created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (project_id) REFERENCES projects(id),
+  FOREIGN KEY (worker_id) REFERENCES worker(id)
+);
+
+CREATE TABLE IF NOT EXISTS task (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id    INTEGER,
+  title         TEXT    NOT NULL,
+  description   TEXT,
+  due_date      DATE,
+  due_time      TEXT,
+  priority      TEXT    DEFAULT 'medium',
+  status        TEXT    DEFAULT 'todo',
+  assignee      TEXT,
+  source        TEXT    DEFAULT 'manual',
+  milestone_id  INTEGER,
+  created_by    INTEGER,
+  created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+  done_at       DATETIME,
+  pushed_at     DATETIME,
+  FOREIGN KEY (project_id) REFERENCES projects(id)
+);
 """
 
 

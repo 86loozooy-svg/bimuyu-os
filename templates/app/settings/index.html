@@ -9,6 +9,7 @@
   <a class="tab {% if tab == 'homepage' %}active{% endif %}" href="?tab=homepage">首页内容</a>
   <a class="tab {% if tab == 'public' %}active{% endif %}" href="?tab=public">公开站管理</a>
   <a class="tab {% if tab == 'account' %}active{% endif %}" href="?tab=account">账户</a>
+  <a class="tab {% if tab == 'notification' %}active{% endif %}" href="?tab=notification">通知配置</a>
   <a class="tab" href="/app/settings/ai-cost">智能造价·AI</a>
 </div>
 
@@ -337,6 +338,34 @@
       <div class="form-group" style="grid-column:1/-1;display:flex;justify-content:flex-end">
         <button type="submit" class="btn btn-primary">修改密码</button>
       </div>
+  </form>
+</div>
+
+{% elif tab == 'notification' %}
+<div class="card">
+  <h3 style="margin-bottom:8px">每日推送配置</h3>
+  <p style="color:var(--muted);font-size:.85rem;margin-bottom:20px">设置后，系统每日按指定时间扫描「到期未完成任务」并推送到已配置的通道；若未配置任何通道，将仅以站内红点提醒。</p>
+  <form method="post" action="/app/settings/notification" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="form-group"><label>推送开关</label><label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" name="push_enabled" {% if site.get('notify_push_enabled') == '1' %}checked{% endif %}> 启用每日自动推送</label></div>
+    <div class="form-group"><label>推送时间</label><input type="time" name="push_time" value="{{ site.get('notify_push_time', '08:00') }}"></div>
+
+    <h4 style="grid-column:1/-1;margin:8px 0 4px">即时通讯 Webhook</h4>
+    <div class="form-group"><label>飞书 Webhook</label><input name="feishu_webhook" value="{{ site.get('notify_feishu_webhook', '') }}" placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/..."></div>
+    <div class="form-group"><label>企业微信 Webhook</label><input name="wecom_webhook" value="{{ site.get('notify_wecom_webhook', '') }}" placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=..."></div>
+    <div class="form-group" style="grid-column:1/-1"><label>钉钉 Webhook</label><input name="dingtalk_webhook" value="{{ site.get('notify_dingtalk_webhook', '') }}" placeholder="https://oapi.dingtalk.com/robot/send?access_token=..."></div>
+
+    <h4 style="grid-column:1/-1;margin:8px 0 4px">邮件 (SMTP)</h4>
+    <div class="form-group"><label>启用邮件</label><label style="display:flex;align-items:center;gap:8px;font-weight:400"><input type="checkbox" name="email_enabled" {% if site.get('notify_email_enabled') == '1' %}checked{% endif %}> 通过邮件推送</label></div>
+    <div class="form-group"><label>SMTP 主机</label><input name="email_smtp_host" value="{{ site.get('notify_email_smtp_host', '') }}" placeholder="smtp.example.com"></div>
+    <div class="form-group"><label>端口</label><input name="email_smtp_port" value="{{ site.get('notify_email_smtp_port', '465') }}"></div>
+    <div class="form-group"><label>发件账号</label><input name="email_smtp_user" value="{{ site.get('notify_email_smtp_user', '') }}"></div>
+    <div class="form-group"><label>发件密码/授权码</label><input type="password" name="email_smtp_pass" value="{{ site.get('notify_email_smtp_pass', '') }}" autocomplete="new-password"></div>
+    <div class="form-group"><label>发件人</label><input name="email_from" value="{{ site.get('notify_email_from', '') }}"></div>
+    <div class="form-group"><label>收件人</label><input name="email_to" value="{{ site.get('notify_email_to', '') }}" placeholder="多个用逗号分隔"></div>
+
+    <div class="form-group" style="grid-column:1/-1;display:flex;justify-content:flex-end">
+      <button type="submit" class="btn btn-primary">保存通知配置</button>
+    </div>
   </form>
 </div>
 {% endif %}

@@ -1268,3 +1268,18 @@ details > summary::-webkit-details-marker { display: none; }
   font-size: 0.75rem;
   color: var(--color-text-muted);
 }
+
+/* ── 侧边栏站内红点（到期未完成任务数） ── */
+.nav-badge {
+  margin-left: auto;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #ff3a5c;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}

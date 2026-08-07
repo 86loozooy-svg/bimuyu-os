@@ -21,6 +21,7 @@
   {% endif %}
   <a class="tab {% if tab == 'execution' %}active{% endif %}" href="?tab=execution">执行</a>
   <a class="tab {% if tab == 'materials' %}active{% endif %}" href="?tab=materials">物料清单</a>
+  <a class="tab {% if tab == 'team' %}active{% endif %}" href="?tab=team">施工团队</a>
   {% if show_finance %}
   <a class="tab {% if tab == 'finance' %}active{% endif %}" href="?tab=finance">财务 🔒</a>
   {% endif %}
@@ -712,6 +713,73 @@ loadCatalogAndPresets();
   </div>
 </div>
 <script src="/static/js/bom_manager.js"></script>
+
+{% elif tab == 'team' %}
+<div class="card">
+  <h3 style="margin-bottom:14px">施工团队</h3>
+  <form method="post" action="/app/projects/{{ project.id }}/assignments/new" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;align-items:end;margin-bottom:20px">
+    <div class="form-group" style="margin:0"><label>工人 *</label>
+      <select name="worker_id" required>{% for w in workers %}<option value="{{ w.id }}">{{ w.name }}{% if w.role %}（{{ w.role }}）{% endif %}</option>{% endfor %}</select>
+    </div>
+    <div class="form-group" style="margin:0"><label>现场角色</label><input name="role_on_project" placeholder="如：木工班长"></div>
+    <div class="form-group" style="margin:0"><label>开始</label><input type="date" name="start_date"></div>
+    <div class="form-group" style="margin:0"><label>结束</label><input type="date" name="end_date"></div>
+    <div class="form-group" style="margin:0"><label>状态</label>
+      <select name="status">
+        <option value="planned">待进场</option>
+        <option value="active">施工中</option>
+        <option value="done">已完工</option>
+      </select>
+    </div>
+    <div class="form-group" style="margin:0;display:flex;align-items:center;gap:8px;font-weight:400">
+      <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" name="is_lead"> 设为现场负责人</label>
+    </div>
+    <div class="form-group" style="margin:0;grid-column:1/-1"><label>备注</label><input name="notes"></div>
+    <div class="form-group" style="margin:0;grid-column:1/-1;display:flex;justify-content:flex-end">
+      <button type="submit" class="btn btn-primary">添加成员</button>
+    </div>
+  </form>
+
+  <table>
+    <thead>
+      <tr><th>工人</th><th>工种</th><th>现场角色</th><th>排期</th><th>状态</th><th>电话</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for a in assignments %}
+      <tr>
+        <td>
+          <strong>{{ a.worker_name }}</strong>
+          {% if a.is_lead %}<span class="badge" style="background:rgba(43,224,140,.18);color:#2be08c;margin-left:6px">负责人</span>{% endif %}
+        </td>
+        <td>{{ a.worker_role or '—' }}</td>
+        <td>{{ a.role_on_project or '—' }}</td>
+        <td class="mono">
+          {% if a.start_date or a.end_date %}{{ a.start_date or '?' }} → {{ a.end_date or '?' }}{% else %}—{% endif %}
+        </td>
+        <td>
+          {% if a.status == 'active' %}<span class="badge" style="background:rgba(91,107,255,.18);color:#7c8bff">施工中</span>
+          {% elif a.status == 'done' %}<span class="badge">已完工</span>
+          {% else %}<span style="font-size:.75rem;color:var(--muted)">待进场</span>{% endif %}
+        </td>
+        <td>{% if a.worker_phone %}<a href="tel:{{ a.worker_phone }}" style="color:var(--color-primary-hover)">{{ a.worker_phone }}</a>{% else %}—{% endif %}</td>
+        <td style="white-space:nowrap">
+          {% if not a.is_lead %}
+          <form method="post" action="/app/projects/{{ project.id }}/assignments/{{ a.id }}/lead" style="display:inline">
+            <button type="submit" class="btn btn-outline" style="padding:4px 10px;font-size:.75rem">设负责人</button>
+          </form>
+          {% endif %}
+          <form method="post" action="/app/projects/{{ project.id }}/assignments/{{ a.id }}/delete" style="display:inline" onsubmit="return confirm('移除该成员？')">
+            <button type="submit" class="btn btn-tertiary" style="padding:4px 10px;font-size:.75rem;color:#c0392b">移除</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+      {% if not assignments %}
+      <tr><td colspan="7" class="empty-cell">尚未排期任何工人，先在上方添加，或到「工人通讯录」维护档案。</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
 
 {% elif tab == 'execution' %}
 <div class="card">

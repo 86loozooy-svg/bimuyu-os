@@ -548,6 +548,47 @@ async def save_about(user: dict = Depends(require_admin), body_md: str = Form(""
     return RedirectResponse(url="/app/settings?tab=public", status_code=303)
 
 
+@router.post("/notification")
+async def save_notification(
+    user: dict = Depends(require_admin),
+    push_enabled: str = Form(""),
+    push_time: str = Form("08:00"),
+    feishu_webhook: str = Form(""),
+    wecom_webhook: str = Form(""),
+    dingtalk_webhook: str = Form(""),
+    email_enabled: str = Form(""),
+    email_smtp_host: str = Form(""),
+    email_smtp_port: str = Form("465"),
+    email_smtp_user: str = Form(""),
+    email_smtp_pass: str = Form(""),
+    email_from: str = Form(""),
+    email_to: str = Form(""),
+):
+    updates = {
+        "notify_push_enabled": "1" if push_enabled == "on" else "0",
+        "notify_push_time": push_time or "08:00",
+        "notify_feishu_webhook": feishu_webhook or "",
+        "notify_wecom_webhook": wecom_webhook or "",
+        "notify_dingtalk_webhook": dingtalk_webhook or "",
+        "notify_email_enabled": "1" if email_enabled == "on" else "0",
+        "notify_email_smtp_host": email_smtp_host or "",
+        "notify_email_smtp_port": email_smtp_port or "465",
+        "notify_email_smtp_user": email_smtp_user or "",
+        "notify_email_smtp_pass": email_smtp_pass or "",
+        "notify_email_from": email_from or "",
+        "notify_email_to": email_to or "",
+    }
+    with db_session() as conn:
+        for k, v in updates.items():
+            conn.execute(
+                "INSERT INTO site_config (key, value) VALUES (?, ?) "
+                "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                (k, v),
+            )
+    log_audit(user["id"], "update", "site_config", 0, "notification")
+    return RedirectResponse(url="/app/settings?tab=notification", status_code=303)
+
+
 @router.post("/homepage")
 async def save_homepage(
     user: dict = Depends(require_admin),

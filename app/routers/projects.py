@@ -265,6 +265,14 @@ async def add_milestone(
             """,
             (project_id, name, start_date, end_date, end_date, status, 1 if status == "done" else 0),
         )
+        mid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+        # 里程碑自动生成一条关联任务（到期提醒）
+        from app.routers.tasks import sync_task_from_milestone
+
+        sync_task_from_milestone(
+            conn, project_id,
+            {"id": mid, "name": name, "end_date": end_date, "due_date": end_date},
+        )
     log_audit(user["id"], "create", "milestone", project_id)
     return RedirectResponse(url=f"/app/projects/{project_id}?tab=overview", status_code=303)
 
@@ -292,6 +300,12 @@ async def update_milestone(
             """,
             (name, start_date, end_date, end_date, status, 1 if status == "done" else 0, mid, project_id),
         )
+        from app.routers.tasks import sync_task_from_milestone
+
+        sync_task_from_milestone(
+            conn, project_id,
+            {"id": mid, "name": name, "end_date": end_date, "due_date": end_date},
+        )
     log_audit(user["id"], "update", "milestone", project_id)
     return RedirectResponse(url=f"/app/projects/{project_id}?tab=overview", status_code=303)
 
@@ -305,12 +319,97 @@ async def delete_milestone(
     if not user_can_access_project(user, project_id) or user["role"] != "admin":
         raise HTTPException(status_code=403)
     with db_session() as conn:
+        from app.routers.tasks import delete_tasks_for_milestone
+
+        delete_tasks_for_milestone(conn, mid)
         conn.execute(
             "DELETE FROM project_milestones WHERE id = ? AND project_id = ?",
             (mid, project_id),
         )
     log_audit(user["id"], "delete", "milestone", project_id)
     return RedirectResponse(url=f"/app/projects/{project_id}?tab=overview", status_code=303)
+
+
+# ---------------------------------------------------------------------------
+# 施工团队：项目 ↔ 工人分配（排期 / 现场负责人）
+# ---------------------------------------------------------------------------
+@router.post("/{project_id}/assignments/new")
+async def add_assignment(
+    project_id: int,
+    request: Request,
+    user: dict = Depends(get_current_user),
+):
+    if not user_can_access_project(user, project_id) or user["role"] != "admin":
+        raise HTTPException(status_code=403)
+    form = await request.form()
+    worker_id = int(form.get("worker_id") or 0)
+    if not worker_id:
+        raise HTTPException(status_code=400, detail="请选择工人")
+    role_on_project = (form.get("role_on_project") or "").strip()
+    is_lead = 1 if form.get("is_lead") else 0
+    start_date = form.get("start_date") or None
+    end_date = form.get("end_date") or None
+    status = (form.get("status") or "planned").strip()
+    notes = (form.get("notes") or "").strip()
+    with db_session() as conn:
+        if is_lead:
+            conn.execute(
+                "UPDATE project_assignment SET is_lead = 0 WHERE project_id = ?", (project_id,)
+            )
+        conn.execute(
+            """
+            INSERT INTO project_assignment
+                (project_id, worker_id, role_on_project, is_lead, start_date, end_date, status, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (project_id, worker_id, role_on_project or None, is_lead, start_date, end_date, status, notes or None),
+        )
+    log_audit(user["id"], "create", "assignment", project_id)
+    return RedirectResponse(url=f"/app/projects/{project_id}?tab=team", status_code=303)
+
+
+@router.post("/{project_id}/assignments/{aid}/lead")
+async def toggle_assignment_lead(
+    project_id: int,
+    aid: int,
+    user: dict = Depends(get_current_user),
+):
+    if not user_can_access_project(user, project_id) or user["role"] != "admin":
+        raise HTTPException(status_code=403)
+    with db_session() as conn:
+        row = conn.execute(
+            "SELECT is_lead FROM project_assignment WHERE id = ? AND project_id = ?",
+            (aid, project_id),
+        ).fetchone()
+        if not row:
+            raise HTTPException(status_code=404)
+        new_lead = 0 if row["is_lead"] else 1
+        if new_lead:
+            conn.execute(
+                "UPDATE project_assignment SET is_lead = 0 WHERE project_id = ?", (project_id,)
+            )
+        conn.execute(
+            "UPDATE project_assignment SET is_lead = ? WHERE id = ? AND project_id = ?",
+            (new_lead, aid, project_id),
+        )
+    return RedirectResponse(url=f"/app/projects/{project_id}?tab=team", status_code=303)
+
+
+@router.post("/{project_id}/assignments/{aid}/delete")
+async def delete_assignment(
+    project_id: int,
+    aid: int,
+    user: dict = Depends(get_current_user),
+):
+    if not user_can_access_project(user, project_id) or user["role"] != "admin":
+        raise HTTPException(status_code=403)
+    with db_session() as conn:
+        conn.execute(
+            "DELETE FROM project_assignment WHERE id = ? AND project_id = ?",
+            (aid, project_id),
+        )
+    log_audit(user["id"], "delete", "assignment", project_id)
+    return RedirectResponse(url=f"/app/projects/{project_id}?tab=team", status_code=303)
 
 
 @router.get("/{project_id}", response_class=HTMLResponse)
@@ -361,6 +460,20 @@ async def project_detail(
             ).fetchall()
         )
         clients = rows_to_list(conn.execute("SELECT * FROM clients ORDER BY name").fetchall())
+        workers = rows_to_list(conn.execute("SELECT * FROM worker ORDER BY name").fetchall())
+        assignments = rows_to_list(
+            conn.execute(
+                """
+                SELECT a.*, w.name as worker_name, w.role as worker_role,
+                       w.phone as worker_phone, w.status as worker_status
+                FROM project_assignment a
+                JOIN worker w ON a.worker_id = w.id
+                WHERE a.project_id = ?
+                ORDER BY a.is_lead DESC, w.name
+                """,
+                (project_id,),
+            ).fetchall()
+        )
 
     timeline = _build_timeline(project, milestones)
 
@@ -400,6 +513,8 @@ async def project_detail(
             "defaults": defaults,
             "status_labels": STATUS_LABELS,
             "show_finance": show_finance,
+            "workers": workers,
+            "assignments": assignments,
         },
     )
 

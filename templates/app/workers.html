@@ -1,0 +1,87 @@
+{% extends "app/base.html" %}
+{% block title %}工人通讯录 — Studio OS{% endblock %}
+{% block content %}
+<div class="app-header">
+  <div>
+    <div class="eyebrow" style="margin-bottom:8px">Contacts</div>
+    <h1>工人通讯录</h1>
+    <p style="margin-top:6px">施工班组与外包工人的统一档案，电话支持一键拨打。</p>
+  </div>
+</div>
+
+{% if edit_worker %}
+<div class="card">
+  <h3 style="margin-bottom:12px">编辑工人</h3>
+  <form method="post" action="/app/workers/{{ edit_worker.id }}/edit" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;align-items:end">
+    <div class="form-group" style="margin:0"><label>姓名 *</label><input name="name" value="{{ edit_worker.name }}" required></div>
+    <div class="form-group" style="margin:0"><label>工种</label>
+      <select name="role">{% for r in role_options %}<option value="{{ r }}" {% if edit_worker.role == r %}selected{% endif %}>{{ r }}</option>{% endfor %}</select>
+    </div>
+    <div class="form-group" style="margin:0"><label>电话</label><input name="phone" value="{{ edit_worker.phone or '' }}"></div>
+    <div class="form-group" style="margin:0"><label>微信</label><input name="wechat" value="{{ edit_worker.wechat or '' }}"></div>
+    <div class="form-group" style="margin:0"><label>工价/天</label><input type="number" step="0.01" name="daily_rate" value="{{ edit_worker.daily_rate or 0 }}"></div>
+    <div class="form-group" style="margin:0"><label>所属公司/班组</label><input name="company" value="{{ edit_worker.company or '' }}"></div>
+    <div class="form-group" style="margin:0"><label>身份证号</label><input name="id_number" value="{{ edit_worker.id_number or '' }}"></div>
+    <div class="form-group" style="margin:0"><label>状态</label>
+      <select name="status">{% for s in status_options %}<option value="{{ s }}" {% if edit_worker.status == s %}selected{% endif %}>{{ '在职' if s=='active' else '停用' }}</option>{% endfor %}</select>
+    </div>
+    <div class="form-group" style="margin:0;grid-column:1/-1"><label>备注</label><input name="notes" value="{{ edit_worker.notes or '' }}"></div>
+    <div class="form-group" style="margin:0;grid-column:1/-1;display:flex;gap:8px;justify-content:flex-end">
+      <a href="/app/workers" class="btn btn-tertiary">取消</a>
+      <button type="submit" class="btn btn-primary">保存</button>
+    </div>
+  </form>
+</div>
+{% endif %}
+
+<div class="card">
+  <h3 style="margin-bottom:12px">新增工人</h3>
+  <form method="post" action="/app/workers/new" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;align-items:end">
+    <div class="form-group" style="margin:0"><label>姓名 *</label><input name="name" required placeholder="如：张师傅"></div>
+    <div class="form-group" style="margin:0"><label>工种</label>
+      <select name="role">{% for r in role_options %}<option value="{{ r }}">{{ r }}</option>{% endfor %}</select>
+    </div>
+    <div class="form-group" style="margin:0"><label>电话</label><input name="phone" placeholder="13800000000"></div>
+    <div class="form-group" style="margin:0"><label>微信</label><input name="wechat"></div>
+    <div class="form-group" style="margin:0"><label>工价/天</label><input type="number" step="0.01" name="daily_rate" value="0"></div>
+    <div class="form-group" style="margin:0"><label>所属公司/班组</label><input name="company"></div>
+    <div class="form-group" style="margin:0"><label>身份证号</label><input name="id_number"></div>
+    <div class="form-group" style="margin:0"><label>状态</label>
+      <select name="status">{% for s in status_options %}<option value="{{ s }}">{{ '在职' if s=='active' else '停用' }}</option>{% endfor %}</select>
+    </div>
+    <div class="form-group" style="margin:0;grid-column:1/-1"><label>备注</label><input name="notes"></div>
+    <div class="form-group" style="margin:0;grid-column:1/-1;display:flex;justify-content:flex-end">
+      <button type="submit" class="btn btn-primary">添加工人</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr><th>姓名</th><th>工种</th><th>电话</th><th>微信</th><th>工价/天</th><th>状态</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for w in workers %}
+      <tr>
+        <td><strong>{{ w.name }}</strong>{% if w.company %}<div style="font-size:.75rem;color:var(--color-text-secondary)">{{ w.company }}</div>{% endif %}</td>
+        <td>{{ w.role or '—' }}</td>
+        <td>{% if w.phone %}<a href="tel:{{ w.phone }}" style="color:var(--color-primary-hover)">{{ w.phone }}</a>{% else %}—{% endif %}</td>
+        <td>{{ w.wechat or '—' }}</td>
+        <td class="mono">¥{{ '{:,.0f}'.format(w.daily_rate or 0) }}</td>
+        <td>{% if w.status == 'active' %}<span class="badge">在职</span>{% else %}<span style="font-size:.75rem;color:var(--muted)">停用</span>{% endif %}</td>
+        <td style="white-space:nowrap">
+          <a href="/app/workers?edit={{ w.id }}" class="btn btn-outline" style="padding:4px 10px;font-size:.75rem">编辑</a>
+          <form method="post" action="/app/workers/{{ w.id }}/delete" style="display:inline" onsubmit="return confirm('删除工人「{{ w.name }}」？其项目分配也会解除。')">
+            <button type="submit" class="btn btn-tertiary" style="padding:4px 10px;font-size:.75rem;color:#c0392b">删除</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+      {% if not workers %}
+      <tr><td colspan="7" class="empty-cell">暂无工人，先在上方添加。</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

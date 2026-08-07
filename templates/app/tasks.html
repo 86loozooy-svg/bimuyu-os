@@ -1,0 +1,90 @@
+{% extends "app/base.html" %}
+{% block title %}待办 — Studio OS{% endblock %}
+{% block content %}
+<div class="app-header">
+  <div>
+    <div class="eyebrow" style="margin-bottom:8px">To-Do</div>
+    <h1>待办清单</h1>
+    <p style="margin-top:6px">手动创建待办，或由里程碑自动生成；每日 {{ site.notify_push_time if site and site.get('notify_push_time') else '08:00' }} 自动推送提醒。</p>
+  </div>
+  <div class="page-actions">
+    {% if user.role == 'admin' %}
+    <form method="post" action="/app/tasks/push-now" style="display:inline">
+      <button type="submit" class="btn btn-outline"><i data-lucide="send"></i> 立即推送</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+{% if request.query_params.get('pushed') is not none %}
+<div class="card" style="background:var(--color-success-soft);border-color:rgba(43,224,140,0.22);margin-bottom:16px">
+  <p style="color:var(--color-success)">已触发推送，本次推送 {{ request.query_params.get('pushed') }} 条到期待办（未配置通道时仅更新站内提醒）。</p>
+</div>
+{% endif %}
+
+<div class="tabs" style="margin-bottom:16px">
+  <a class="tab {% if status_filter == 'all' %}active{% endif %}" href="/app/tasks?status=all">全部</a>
+  <a class="tab {% if status_filter == 'open' %}active{% endif %}" href="/app/tasks?status=open">未完成</a>
+  <a class="tab {% if status_filter == 'done' %}active{% endif %}" href="/app/tasks?status=done">已完成</a>
+</div>
+
+<div class="card" style="margin-bottom:16px">
+  <h3 style="margin-bottom:12px">新建待办</h3>
+  <form method="post" action="/app/tasks/new" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;align-items:end">
+    <div class="form-group" style="margin:0;grid-column:1/-1"><label>标题 *</label><input name="title" required placeholder="如：确认现场交底时间"></div>
+    <div class="form-group" style="margin:0"><label>关联项目</label>
+      <select name="project_id"><option value="0">不关联</option>{% for p in projects %}<option value="{{ p.id }}">{{ p.code }} · {{ p.name }}</option>{% endfor %}</select>
+    </div>
+    <div class="form-group" style="margin:0"><label>到期日期</label><input type="date" name="due_date"></div>
+    <div class="form-group" style="margin:0"><label>时间</label><input type="time" name="due_time"></div>
+    <div class="form-group" style="margin:0"><label>优先级</label>
+      <select name="priority"><option value="high">高</option><option value="medium" selected>中</option><option value="low">低</option></select>
+    </div>
+    <div class="form-group" style="margin:0"><label>负责人</label><input name="assignee" placeholder="姓名/角色"></div>
+    <div class="form-group" style="margin:0;grid-column:1/-1"><label>备注</label><input name="description"></div>
+    <div class="form-group" style="margin:0;grid-column:1/-1;display:flex;justify-content:flex-end">
+      <button type="submit" class="btn btn-primary">添加待办</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr><th>状态</th><th>标题</th><th>项目</th><th>优先级</th><th>到期</th><th>负责人</th><th>来源</th><th>推送</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for t in tasks %}
+      <tr {% if t.status == 'done' %}style="opacity:.55"{% endif %}>
+        <td>
+          <form method="post" action="/app/tasks/{{ t.id }}/toggle" style="display:inline">
+            <button type="submit" title="切换完成" style="background:none;border:1px solid var(--color-border);border-radius:6px;width:24px;height:24px;cursor:pointer;color:var(--color-success)">
+              {% if t.status == 'done' %}✓{% else %}○{% endif %}
+            </button>
+          </form>
+        </td>
+        <td>{% if t.status == 'done' %}<s>{{ t.title }}</s>{% else %}{{ t.title }}{% endif %}</td>
+        <td>{% if t.project_name %}<a href="/app/projects/{{ t.project_id }}">{{ t.project_name }}</a>{% else %}—{% endif %}</td>
+        <td>
+          {% if t.priority == 'high' %}<span class="badge" style="background:rgba(255,58,92,.18);color:#ff6b6b">高</span>
+          {% elif t.priority == 'low' %}<span class="badge">低</span>
+          {% else %}<span class="badge" style="background:rgba(245,213,71,.18);color:#f5d547">中</span>{% endif %}
+        </td>
+        <td class="mono">{{ t.due_date or '—' }}{% if t.due_time %} {{ t.due_time }}{% endif %}</td>
+        <td>{{ t.assignee or '—' }}</td>
+        <td>{{ source_labels.get(t.source, t.source) }}</td>
+        <td class="mono" style="font-size:.75rem">{{ t.pushed_at[:16] if t.pushed_at else '—' }}</td>
+        <td>
+          <form method="post" action="/app/tasks/{{ t.id }}/delete" style="display:inline" onsubmit="return confirm('删除该待办？')">
+            <button type="submit" class="btn btn-tertiary" style="padding:4px 10px;font-size:.75rem;color:#c0392b">删除</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+      {% if not tasks %}
+      <tr><td colspan="9" class="empty-cell">暂无待办。</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

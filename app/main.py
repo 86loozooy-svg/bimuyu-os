@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import BASE_DIR
-from app.routers import app_auth, app_dashboard, budget, calculator, catalog, cost_estimate, library, projects, public, quotes, settings
+from app.routers import app_auth, app_dashboard, budget, calculator, catalog, cost_estimate, library, projects, public, quotes, settings, tasks, workers
 
 app = FastAPI(title="Studio OS", version="1.0.0", docs_url=None, redoc_url=None)
 
@@ -49,6 +49,8 @@ app.include_router(calculator.router)
 app.include_router(cost_estimate.router)
 app.include_router(budget.router)
 app.include_router(settings.router)
+app.include_router(workers.router)
+app.include_router(tasks.router)
 
 
 @app.on_event("startup")
@@ -69,6 +71,44 @@ def _startup_ensure_schema() -> None:
     except Exception as exc:  # noqa: BLE001
         import logging
         logging.getLogger("uvicorn.error").warning("账号列迁移跳过: %s", exc)
+    _startup_scheduler()
+
+
+def _startup_scheduler() -> None:
+    """启动 APScheduler：每日按 notify_push_time（默认 08:00）扫描到期待办并推送。"""
+    try:
+        import atexit
+        import logging
+
+        from apscheduler.schedulers.background import BackgroundScheduler
+
+        from app.database import db_session
+        from app.services import push
+
+        hour, minute = 8, 0
+        try:
+            with db_session() as conn:
+                row = conn.execute(
+                    "SELECT value FROM site_config WHERE key = 'notify_push_time'"
+                ).fetchone()
+                if row and row["value"]:
+                    hh, mm = str(row["value"]).split(":")
+                    hour, minute = int(hh), int(mm)
+        except Exception:
+            pass
+        sched = BackgroundScheduler()
+        sched.add_job(
+            push.scan_and_push, "cron", hour=hour, minute=minute, id="daily_task_push"
+        )
+        sched.start()
+        logging.getLogger("uvicorn.error").info(
+            "调度器已启动：每日 %02d:%02d 扫描待办推送", hour, minute
+        )
+        atexit.register(lambda: sched.shutdown(wait=False))
+    except Exception as exc:  # noqa: BLE001
+        import logging
+
+        logging.getLogger("uvicorn.error").warning("调度器启动跳过: %s", exc)
 
 
 @app.get("/health")

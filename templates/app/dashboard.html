@@ -184,6 +184,35 @@
 </div>
 {% endif %}
 
+{% if tasks_today %}
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">今日待办</h3>
+    <span class="chip" data-tone="warning">{{ tasks_today|length }} 项</span>
+    <a href="/app/tasks" class="btn btn-sm btn-outline" style="margin-left:auto">全部待办</a>
+  </div>
+  <table>
+    <thead>
+      <tr><th>任务</th><th>项目</th><th>到期</th><th>优先级</th></tr>
+    </thead>
+    <tbody>
+      {% for t in tasks_today %}
+      <tr>
+        <td>{{ t.title }}</td>
+        <td>{% if t.project_name %}<a href="/app/projects/{{ t.project_id }}">{{ t.project_name }}</a>{% else %}—{% endif %}</td>
+        <td class="mono">{{ t.due_date }}{% if t.due_time %} {{ t.due_time }}{% endif %}</td>
+        <td>
+          {% if t.priority == 'high' %}<span class="badge" style="background:rgba(255,58,92,.18);color:#ff6b6b">高</span>
+          {% elif t.priority == 'low' %}<span class="badge">低</span>
+          {% else %}<span class="badge" style="background:rgba(245,213,71,.18);color:#f5d547">中</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
 {% if status_dist %}
