@@ -1,0 +1,27 @@
+{% extends "public/base.html" %}
+{% block title %}案例展示 — vsence问世{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ asset_url('/static/css/cases-pages.css') }}">{% endblock %}
+{% block content %}
+<section class="cases-page">
+  <div class="container">
+    <a href="/" class="back-home">← 返回首页</a>
+    <h1 class="page-title">案例展示 <span>Projects</span></h1>
+
+    <div class="cases-grid">
+      {% for case in cases %}
+      <a href="/projects/{{ case.id }}" class="case-card">
+        <div class="case-img"><img src="{{ case.cover_image }}" alt="{{ case.title }}"></div>
+        <div class="case-info">
+          <h3>{{ case.title }}</h3>
+          <p>{% if case.area or case.category %}{% if case.area %}{{ case.area }}㎡{% endif %}{% if case.area and case.category %} · {% endif %}{{ case.category }}{% else %}{{ case.subtitle }}{% endif %}</p>
+          <span class="case-tags">
+            {% if case.category %}<span class="case-tag">{{ case.category }}</span>{% endif %}
+            <span class="case-status">{% if case.is_online %}已上线{% else %}草稿{% endif %}</span>
+          </span>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -415,6 +415,23 @@ def _migrate_schema() -> None:
         conn.close()
 
 
+def ensure_cases_columns() -> None:
+    """Idempotent: add area / category to cases for the public cascade wall & detail page."""
+    conn = get_connection()
+    try:
+        _add_columns(
+            conn,
+            "cases",
+            {
+                "area": "REAL",
+                "category": "TEXT",
+            },
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def seed_data() -> None:
     with db_session() as conn:
         if conn.execute("SELECT COUNT(*) FROM studio_profile").fetchone()[0] == 0:

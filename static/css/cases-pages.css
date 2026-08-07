@@ -1,0 +1,160 @@
+/* =========================================================
+   案例列表页 / 案例详情页（/projects、/projects/{id}）
+   浅色主题，配色沿用 #63615A / greenyellow(#c8ff00)
+   不使用自动滚动，常规网格，强调可读性与操作便利
+   ========================================================= */
+
+.back-home {
+  display: inline-block;
+  margin: 28px 0 18px;
+  font-size: .9rem;
+  color: var(--accent, #63615A);
+  text-decoration: none;
+}
+.back-home:hover { text-decoration: underline; }
+
+.cases-page { padding: 20px 0 80px; }
+
+.page-title {
+  font-size: 2rem;
+  font-weight: 300;
+  color: var(--text, #1c201d);
+  margin-bottom: 28px;
+}
+.page-title span {
+  font-size: .9rem;
+  letter-spacing: .18em;
+  color: var(--muted, #6a645d);
+  margin-left: 8px;
+  text-transform: uppercase;
+}
+
+/* 列表卡片标签（grid 用，独立定义避免依赖首页 cascade.css） */
+.case-tags { display: inline-flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.case-tag {
+  display: inline-block;
+  font-size: .7rem;
+  letter-spacing: .04em;
+  color: #4b463f;
+  background: #c8ff00;
+  padding: 2px 8px;
+}
+.case-status {
+  display: inline-block;
+  font-size: .7rem;
+  color: var(--muted, #6a645d);
+  border: 1px solid var(--border, #e3ddd2);
+  padding: 2px 8px;
+  border-radius: 0;
+}
+
+/* ===== 详情页 ===== */
+.case-detail { padding: 12px 0 80px; }
+.case-detail__title {
+  font-size: 2.2rem;
+  font-weight: 300;
+  color: var(--text, #1c201d);
+  margin: 8px 0 6px;
+}
+.case-detail__sub {
+  color: var(--muted, #6a645d);
+  margin-bottom: 24px;
+  font-size: 1rem;
+}
+.case-detail__hero {
+  width: 100%;
+  max-height: 60vh;
+  object-fit: cover;
+  display: block;
+  margin-bottom: 36px;
+  background: #d4c5b3;
+}
+.case-detail__body {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 40px;
+  align-items: start;
+}
+.case-detail__main h2 {
+  font-size: 1.2rem;
+  font-weight: 500;
+  margin: 28px 0 12px;
+  color: var(--text, #1c201d);
+}
+.case-detail__main p { color: var(--muted, #6a645d); line-height: 1.8; }
+
+.case-gallery {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  margin-top: 8px;
+}
+.case-gallery .detail-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: #d4c5b3;
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity .6s ease, transform .6s ease;
+}
+.case-gallery .detail-img.visible { opacity: 1; transform: none; }
+
+.case-detail__aside {
+  position: sticky;
+  top: 90px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e3ddd2);
+  padding: 22px;
+}
+.case-detail__aside h2 { font-size: 1.05rem; margin: 0 0 14px; }
+.info-list { list-style: none; }
+.info-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border, #e3ddd2);
+  font-size: .9rem;
+}
+.info-list li span { color: var(--muted, #6a645d); }
+.info-list li b { color: var(--text, #1c201d); font-weight: 500; }
+
+.module-entry {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px dashed var(--border, #e3ddd2);
+}
+.module-entry h3 { font-size: 1rem; margin-bottom: 6px; }
+.module-entry__hint { font-size: .8rem; color: var(--muted, #6a645d); margin-bottom: 14px; line-height: 1.6; }
+.module-btn {
+  display: block;
+  width: 100%;
+  text-align: center;
+  margin-bottom: 10px;
+  padding: 11px 14px;
+  background: #c8ff00;
+  color: #1c201d;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 0;
+  transition: filter .2s ease, transform .2s ease;
+}
+.module-btn:hover { filter: brightness(1.05); transform: translateY(-2px); text-decoration: none; }
+
+.case-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border, #e3ddd2);
+}
+.case-nav a { color: var(--accent, #63615A); text-decoration: none; font-size: .95rem; }
+.case-nav a:hover { text-decoration: underline; }
+.case-nav__next { text-align: right; }
+
+@media (max-width: 860px) {
+  .case-detail__body { grid-template-columns: 1fr; }
+  .case-detail__aside { position: static; }
+  .case-gallery { grid-template-columns: 1fr; }
+}

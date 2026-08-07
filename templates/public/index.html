@@ -1,5 +1,6 @@
 {% extends "public/base.html" %}
 {% block title %}vsence问世{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ asset_url('/static/css/cascade.css') }}">{% endblock %}
 {% block content %}
 <!-- ===== Hero / STUDIO NOTE 轮播区 ===== -->
 <section class="hero">
@@ -97,42 +98,36 @@
   </div>
 </section>
 
-<!-- ===== 案例展示 ===== -->
-<section class="cases-section" id="cases">
+<!-- ===== 案例展示：Cascading Screens 风格错落自滚动墙 ===== -->
+<section class="case-cascade noise-texture">
   <div class="container">
-    <h2 class="section-title">案例展示 <span>Project</span></h2>
-    <div class="cases-grid">
-      {% for case in cases %}
-      <a href="/cases/{{ case.slug }}" class="case-card">
-        <div class="case-img"><img src="{{ case.cover_image }}" alt="{{ case.title }}"></div>
-        <div class="case-info">
-          <h3>{{ case.title }}</h3>
-          <p>{{ case.subtitle }}</p>
-          <span class="case-more">...more</span>
-        </div>
-      </a>
+    <div class="case-cascade__head">
+      <div>
+        <span class="case-cascade__eyebrow"></span>
+        <h2 class="section-title">案例展示 <span>Project</span></h2>
+      </div>
+    </div>
+
+    <div class="case-cascade__cols">
+      {% for col in case_columns %}
+      <div class="case-cascade__col case-cascade__col--{{ ['a','b','c'][loop.index0] }}">
+        {% for copy in [1, 2] %}
+          {% for case in col %}
+          <a class="case-card" href="/projects/{{ case.id }}"{% if copy == 2 %} aria-hidden="true"{% endif %}>
+            <img class="case-img" src="{{ case.cover_image }}" alt="{{ case.title }}" loading="lazy">
+            <div class="case-info">
+              <h3>{{ case.title }}</h3>
+              <p>{% if case.area or case.category %}{% if case.area %}{{ case.area }}㎡{% endif %}{% if case.area and case.category %} · {% endif %}{{ case.category }}{% else %}{{ case.subtitle }}{% endif %}</p>
+              {% if case.category %}<span class="case-tag">{{ case.category }}</span>{% endif %}
+            </div>
+          </a>
+          {% endfor %}
+        {% endfor %}
+      </div>
       {% endfor %}
     </div>
 
-    <!-- 移动端 Snap（桌面端隐藏，≤768px 显示） -->
-    <div class="mobile-snap-container" data-snap="cases">
-      {% for case in cases %}
-      <article class="mobile-snap-card">
-        <img class="snap-img" src="{{ case.cover_image }}" alt="{{ case.title }}">
-        <div class="snap-body">
-          <h3 class="snap-title">{{ case.title }}</h3>
-          <p class="snap-desc">{{ case.subtitle }}</p>
-          <a href="/cases/{{ case.slug }}" class="animated-button"><span class="text">了解更多</span></a>
-        </div>
-      </article>
-      {% endfor %}
-    </div>
-    <!-- 圆点：在 snap 容器外部正下方 -->
-    <div class="dots mobile-snap-dots" data-dots="cases">
-      {% for case in cases %}
-      <button class="dot{% if loop.first %} active{% endif %}" type="button" data-index="{{ loop.index0 }}" aria-label="第 {{ loop.index }} 个案例"></button>
-      {% endfor %}
-    </div>
+    <a class="case-cascade__more" href="/projects">查看更多案例 <span class="arr">→</span></a>
   </div>
 </section>
 
@@ -348,6 +343,19 @@ function attachWheelPager(root, nextFn, prevFn) {
       });
     });
   });
+})();
+</script>
+
+<!-- 触屏设备：触摸时暂停滚动，松开恢复（可选增强；hover 设备由 CSS 处理） -->
+<script>
+(function () {
+  var wall = document.querySelector('.case-cascade');
+  if (!wall) return;
+  var pause = function () { wall.classList.add('is-paused'); };
+  var resume = function () { wall.classList.remove('is-paused'); };
+  wall.addEventListener('touchstart', pause, { passive: true });
+  wall.addEventListener('touchend', resume, { passive: true });
+  wall.addEventListener('touchcancel', resume, { passive: true });
 })();
 </script>
 

@@ -71,6 +71,13 @@ def _startup_ensure_schema() -> None:
     except Exception as exc:  # noqa: BLE001
         import logging
         logging.getLogger("uvicorn.error").warning("账号列迁移跳过: %s", exc)
+    try:
+        from app.init_db import ensure_cases_columns
+
+        ensure_cases_columns()
+    except Exception as exc:  # noqa: BLE001
+        import logging
+        logging.getLogger("uvicorn.error").warning("cases 列迁移跳过: %s", exc)
     _startup_scheduler()
 
 

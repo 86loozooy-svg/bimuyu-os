@@ -1,0 +1,55 @@
+{% extends "public/base.html" %}
+{% block title %}{{ case.title }} — vsence问世{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ asset_url('/static/css/cases-pages.css') }}">{% endblock %}
+{% block content %}
+<article class="case-detail">
+  <div class="container">
+    <a href="/projects" class="back-home">← 返回案例</a>
+
+    <h1 class="case-detail__title">{{ case.title }}</h1>
+    <p class="case-detail__sub">{{ case.subtitle or '' }}</p>
+
+    {% if case.cover_image %}
+    <img class="case-detail__hero" src="{{ case.cover_image }}" alt="{{ case.title }}">
+    {% endif %}
+
+    <div class="case-detail__body">
+      <div class="case-detail__main">
+        <h2>项目概述</h2>
+        <p>{{ case.description or '暂无详细描述。' }}</p>
+
+        {% if images %}
+        <h2>图集</h2>
+        <div class="case-gallery">
+          {% for img in images %}
+          <img src="{{ img.image_path }}" alt="{{ img.caption or case.title }}" class="detail-img">
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <aside class="case-detail__aside">
+        <h2>项目信息</h2>
+        <ul class="info-list">
+          <li><span>面积</span><b>{% if case.area %}{{ case.area }}㎡{% else %}—{% endif %}</b></li>
+          <li><span>类型</span><b>{{ case.category or '—' }}</b></li>
+          <li><span>状态</span><b>{% if case.is_online %}已上线{% else %}草稿{% endif %}</b></li>
+        </ul>
+
+        <div class="module-entry">
+          <h3>深化模块</h3>
+          <p class="module-entry__hint">进入 Studio OS 工作台，查看该项目的预算追踪、物料清单与施工日志。</p>
+          <a class="module-btn" href="/app/projects">预算追踪 →</a>
+          <a class="module-btn" href="/app/projects">物料清单 BOM →</a>
+          <a class="module-btn" href="/app/projects">施工日志 →</a>
+        </div>
+      </aside>
+    </div>
+
+    <nav class="case-nav">
+      {% if prev_case %}<a class="case-nav__prev" href="/projects/{{ prev_case.id }}">← {{ prev_case.title }}</a>{% else %}<span></span>{% endif %}
+      {% if next_case %}<a class="case-nav__next" href="/projects/{{ next_case.id }}">{{ next_case.title }} →</a>{% else %}<span></span>{% endif %}
+    </nav>
+  </div>
+</article>
+{% endblock %}

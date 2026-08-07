@@ -1,0 +1,172 @@
+/* =========================================================
+   首页案例展示 · Cascading Screens 风格错落自滚动图片墙
+   - 纯 CSS 动画（@keyframes translateY 0 → -50%，linear infinite）
+   - 每列独立滚动、时长不同 → 错落感
+   - 悬停（hover 设备）整体暂停；触屏保持自动滚动
+   - 直角矩形卡片、图片自然高度不裁切
+   - 配色：#63615A / greenyellow(#c8ff00) / 噪点纹理 / 浅米背景
+   无缝循环关键：卡片用 margin-bottom 留白（而非 flex gap），
+   两遍渲染后 -50% 正好落在第一遍末尾，无跳动。
+   ========================================================= */
+
+/* 区块容器：浅米背景 + 噪点纹理（复用 .noise-texture 工具类需定位上下文） */
+.case-cascade {
+  position: relative;
+  isolation: isolate;
+  padding: 80px 0;
+  background: var(--bg, #f7f4ee);
+  overflow: hidden;
+}
+.case-cascade > .container {
+  position: relative;
+  z-index: 2;            /* 抬到噪点层之上 */
+}
+
+/* 标题区 */
+.case-cascade__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+.case-cascade__eyebrow {
+  display: inline-block;
+  width: 34px;
+  height: 4px;
+  background: #c8ff00;            /* greenyellow 签名强调色 */
+  margin-bottom: 12px;
+}
+.case-cascade__head .section-title { margin: 0; }
+
+/* 三列网格（滚动容器，固定高度 + 溢出裁剪 + 上下边缘渐隐） */
+.case-cascade__cols {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  height: 74vh;
+  min-height: 520px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 7%, #000 93%, transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0, #000 7%, #000 93%, transparent 100%);
+}
+
+/* 单列：块级容器，承载两遍 cases；动画平移自身 50% 实现无缝 */
+.case-cascade__col {
+  display: block;
+  min-width: 0;
+  animation-name: cascade-scroll;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+.case-cascade__col--a { animation-duration: 26s; }
+.case-cascade__col--b { animation-duration: 32s; animation-direction: reverse; }  /* 反向滚动，错落更强 */
+.case-cascade__col--c { animation-duration: 29s; }
+
+@keyframes cascade-scroll {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-50%); }
+}
+
+/* 悬停暂停（仅 hover 设备）；纯 CSS，无 JS 定时器 */
+@media (hover: hover) {
+  .case-cascade:hover .case-cascade__col { animation-play-state: paused; }
+}
+/* 触屏可选：JS 给容器加 .is-paused 时也暂停（见 index.html 内联脚本） */
+.case-cascade.is-paused .case-cascade__col { animation-play-state: paused; }
+
+/* ---------- 卡片：直角、轻微阴影、图片自然高度 ---------- */
+.case-cascade .case-card {
+  display: block;
+  margin-bottom: 18px;            /* 关键：用 margin 留白保证无缝 */
+  background: var(--surface, #fff);
+  border-radius: 0;               /* 直角矩形 */
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(26, 22, 20, .06);
+  transition: transform .4s var(--ease-out, ease), box-shadow .4s ease;
+}
+.case-cascade .case-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 30px rgba(26, 22, 20, .14);
+  text-decoration: none;
+}
+/* 图片：自然高度，不强制裁切 → 大小不一的错落感 */
+.case-cascade .case-card .case-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #d4c5b3;            /* 占位底色 */
+}
+.case-cascade .case-card .case-info {
+  padding: 14px 16px 16px;
+}
+.case-cascade .case-card .case-info h3 {
+  font-size: 1rem;
+  font-weight: 400;
+  margin: 0 0 6px;
+  color: var(--text, #1c201d);
+}
+.case-cascade .case-card .case-info p {
+  margin: 0 0 8px;
+  font-size: .82rem;
+  color: var(--muted, #6a645d);
+  line-height: 1.5;
+}
+.case-cascade .case-card .case-tag {
+  display: inline-block;
+  font-size: .7rem;
+  letter-spacing: .04em;
+  color: #4b463f;
+  background: #c8ff00;            /* greenyellow 小标签 */
+  padding: 2px 8px;
+  margin-right: 6px;
+}
+
+/* ---------- 查看更多按钮（滚动容器外部，不参与滚动） ---------- */
+.case-cascade__more {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 32px;
+  padding: 13px 26px;
+  background: #c8ff00;            /* greenyellow */
+  color: #1c201d;
+  font-weight: 600;
+  border: none;
+  border-radius: 0;               /* 直角 */
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform .25s var(--ease-out, ease), filter .25s ease;
+}
+.case-cascade__more:hover {
+  transform: translateX(4px);
+  filter: brightness(1.05);
+  text-decoration: none;
+}
+.case-cascade__more .arr { transition: transform .25s ease; }
+.case-cascade__more:hover .arr { transform: translateX(4px); }
+
+/* ---------- 响应式断点 ---------- */
+/* 平板：2 列，隐藏第三列 */
+@media (max-width: 1024px) {
+  .case-cascade__cols { grid-template-columns: repeat(2, 1fr); }
+  .case-cascade__col--c { display: none; }
+}
+/* 手机：1 列，放慢滚动速度 */
+@media (max-width: 640px) {
+  .case-cascade__cols {
+    grid-template-columns: 1fr;
+    height: 64vh;
+    min-height: 420px;
+  }
+  .case-cascade__col--b { display: none; }
+  .case-cascade__col--a { animation-duration: 38s; }   /* 适当放慢 */
+  .case-cascade__more { width: 100%; justify-content: center; }
+}
+
+/* 减少动效偏好：关闭滚动（保留静态展示） */
+@media (prefers-reduced-motion: reduce) {
+  .case-cascade__col { animation: none !important; }
+}
