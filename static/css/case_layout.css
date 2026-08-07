@@ -128,9 +128,17 @@
 .case-card .case-img {
   display: block;
   width: 100%;
-  height: auto;                       /* 自然高度 → 大小不一的错落感 */
+  height: auto;                       /* 宽度撑满，高度由下方 size 类决定 */
+  object-fit: cover;                  /* size 类给定高度时裁切填充，避免空白/变形 */
   background: #d4c5b3;                /* 占位底色（无图时） */
 }
+
+/* ---------- 不规则尺寸：按 size 类给图片分配不同宽高比 → 自然错落的瀑布流感 ----------
+   列是纵向堆叠（非 CSS Grid），故用「不同高度」实现（用户允许的 grid-row 替代方案）；
+   三列速度差滚动、悬停暂停、直角、双重循环逻辑均保持不变。 */
+.case-card.large  .case-img { aspect-ratio: 3 / 4.4; }   /* 大图：高 */
+.case-card.medium .case-img { aspect-ratio: 4 / 3; }     /* 中图：标准 */
+.case-card.small  .case-img { aspect-ratio: 16 / 10; }   /* 小图：矮 */
 .case-card .case-info { padding: 14px 16px 16px; }
 .case-card .case-info h3 {
   margin: 0 0 6px;

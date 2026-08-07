@@ -111,7 +111,7 @@
       <!-- 右侧滚动区：三列，速度差 30s / 20s / 26s -->
       <div class="case-scroll-container">
         <div class="scroll-column col-1">
-          {% for _ in range(2) %}{% for case in cases %}<a class="case-card" href="/projects/{{ case.id }}">
+          {% for _ in range(2) %}{% for case in cases %}<a class="case-card {{ case.size or 'medium' }}" href="/projects/{{ case.id }}">
             <img class="case-img" src="{{ case.cover_image }}" alt="{{ case.title }}" loading="lazy">
             <div class="case-info">
               <h3>{{ case.title }}</h3>
@@ -121,7 +121,7 @@
           </a>{% endfor %}{% endfor %}
         </div>
         <div class="scroll-column col-2">
-          {% for _ in range(2) %}{% for case in cases %}<a class="case-card" href="/projects/{{ case.id }}">
+          {% for _ in range(2) %}{% for case in cases %}<a class="case-card {{ case.size or 'medium' }}" href="/projects/{{ case.id }}">
             <img class="case-img" src="{{ case.cover_image }}" alt="{{ case.title }}" loading="lazy">
             <div class="case-info">
               <h3>{{ case.title }}</h3>
@@ -131,7 +131,7 @@
           </a>{% endfor %}{% endfor %}
         </div>
         <div class="scroll-column col-3">
-          {% for _ in range(2) %}{% for case in cases %}<a class="case-card" href="/projects/{{ case.id }}">
+          {% for _ in range(2) %}{% for case in cases %}<a class="case-card {{ case.size or 'medium' }}" href="/projects/{{ case.id }}">
             <img class="case-img" src="{{ case.cover_image }}" alt="{{ case.title }}" loading="lazy">
             <div class="case-info">
               <h3>{{ case.title }}</h3>

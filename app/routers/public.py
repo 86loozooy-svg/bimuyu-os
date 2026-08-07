@@ -1,4 +1,5 @@
 import json
+import random
 from pathlib import Path
 
 import markdown
@@ -69,6 +70,9 @@ async def home(request: Request):
                 "SELECT * FROM site_client_logos WHERE is_visible = 1 ORDER BY sort_order"
             ).fetchall()
         )
+    # 为每个案例随机分配展示尺寸，形成不规则瀑布流错落感（双份渲染共用同一 size，保证无缝）
+    for c in cases:
+        c["size"] = random.choice(("large", "medium", "small"))
     return templates.TemplateResponse(
         "public/index.html",
         {
