@@ -1,0 +1,188 @@
+/* =========================================================
+   首页案例展示 · 左固定标题 + 右三列速度差滚动
+   - CSS Grid 左右分栏（30% / 70%），严禁绝对定位
+   - 左侧标题/按钮固定悬浮（不参与滚动）
+   - 右侧三列各自 @keyframes 平移 -50%（双份卡片无缝循环）
+   - 速度差：col-1=30s(基准) / col-2=20s(最快) / col-3=26s(中等)
+   - 悬停整体暂停：纯 CSS，无 JS
+   - 卡片直角(border-radius:0)、图片自然高度、轻微阴影
+   - 配色沿用站点：#63615A / greenyellow(#c8ff00) / 浅米背景
+   ========================================================= */
+
+/* 区块容器：浅米背景 + 噪点纹理 */
+.case-showcase-section {
+  position: relative;
+  isolation: isolate;
+  padding: 80px 0;
+  background: var(--bg, #f7f4ee);
+  overflow: hidden;
+}
+.case-showcase-section > .container {
+  position: relative;
+  z-index: 2;
+}
+
+/* ---------- 整体 Grid 分栏：左 30% / 右 70% ---------- */
+.case-showcase {
+  display: grid;
+  grid-template-columns: 30% 70%;
+  gap: 40px;
+  align-items: stretch;        /* 左右等高，左列可把按钮推到底部 */
+}
+
+/* ---------- 左侧固定区：不参与滚动，标题在上、按钮在底 ---------- */
+.case-header {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;   /* 标题置顶，按钮悬浮于底部 */
+  align-items: flex-start;
+}
+.case-header__title {
+  margin: 0;
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  font-weight: 800;
+  line-height: 1.15;
+  color: #1c201d;                    /* 加粗黑色 */
+}
+.case-header__title span {
+  margin-left: 8px;
+  font-size: .9rem;
+  font-weight: 500;
+  letter-spacing: .08em;
+  color: #8a847b;                    /* 灰色小字 Project */
+  vertical-align: middle;
+}
+.btn-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 26px;
+  background: #c8ff00;                /* 主色调 greenyellow */
+  color: #1c201d;
+  font-weight: 600;
+  border: none;
+  border-radius: 0;                   /* 直角 */
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform .25s ease, filter .25s ease;
+}
+.btn-more:hover {
+  transform: translateX(4px);
+  filter: brightness(1.05);
+  text-decoration: none;
+}
+.btn-more .arr { transition: transform .25s ease; }
+.btn-more:hover .arr { transform: translateX(4px); }
+
+/* ---------- 右侧滚动区：三列网格 + 固定高度裁剪 + 上下渐隐 ---------- */
+.case-scroll-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  height: 72vh;
+  min-height: 520px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 6%, #000 94%, transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0, #000 6%, #000 94%, transparent 100%);
+}
+
+/* 单列：承载双份 cases，平移自身 -50% 实现无缝循环 */
+.scroll-column {
+  display: block;
+  min-width: 0;
+  animation-name: caseScrollUp;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+/* 速度差（硬性指标） */
+.col-1 { animation-duration: 30s; }   /* 较慢，基准 */
+.col-2 { animation-duration: 20s; }   /* 最快，负责“掠过”其他列 */
+.col-3 { animation-duration: 26s; }   /* 中等 */
+
+@keyframes caseScrollUp {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-50%); }
+}
+
+/* 悬停暂停：纯 CSS，无 JS 定时器 */
+@media (hover: hover) {
+  .case-scroll-container:hover .scroll-column { animation-play-state: paused; }
+}
+
+/* ---------- 卡片：直角、轻微阴影、图片自然高度（不裁切） ---------- */
+.case-card {
+  display: block;
+  margin-bottom: 16px;                /* 用 margin 留白保证无缝循环 */
+  background: #fff;
+  border-radius: 0;                   /* 直角矩形 */
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(26, 22, 20, .06);
+  transition: transform .4s ease, box-shadow .4s ease;
+}
+.case-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 30px rgba(26, 22, 20, .14);
+  text-decoration: none;
+}
+.case-card .case-img {
+  display: block;
+  width: 100%;
+  height: auto;                       /* 自然高度 → 大小不一的错落感 */
+  background: #d4c5b3;                /* 占位底色（无图时） */
+}
+.case-card .case-info { padding: 14px 16px 16px; }
+.case-card .case-info h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  font-weight: 400;
+  color: #1c201d;
+}
+.case-card .case-info p {
+  margin: 0 0 8px;
+  font-size: .82rem;
+  color: #6a645d;
+  line-height: 1.5;
+}
+.case-card .case-tag {
+  display: inline-block;
+  font-size: .7rem;
+  letter-spacing: .04em;
+  color: #4b463f;
+  background: #c8ff00;                /* greenyellow 小标签 */
+  padding: 2px 8px;
+}
+
+/* ---------- 响应式 ---------- */
+/* 平板：右区 2 列，隐藏第三列 */
+@media (max-width: 1024px) {
+  .case-scroll-container { grid-template-columns: repeat(2, 1fr); }
+  .scroll-column.col-3 { display: none; }
+}
+/* 手机：左标题置顶（单列），右区单列滚动 */
+@media (max-width: 768px) {
+  .case-showcase {
+    grid-template-columns: 1fr;        /* 上下堆叠：标题置顶 */
+    gap: 24px;
+  }
+  .case-header {
+    flex-direction: row;               /* 标题与按钮并排置顶 */
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .case-scroll-container {
+    grid-template-columns: 1fr;        /* 单列滚动 */
+    height: 64vh;
+    min-height: 420px;
+  }
+  .scroll-column.col-2,
+  .scroll-column.col-3 { display: none; }
+  .scroll-column.col-1 { animation-duration: 36s; }   /* 单列适当放慢 */
+}
+
+/* 减少动效偏好：关闭滚动，保留静态展示 */
+@media (prefers-reduced-motion: reduce) {
+  .scroll-column { animation: none !important; }
+}

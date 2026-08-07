@@ -1,6 +1,6 @@
 {% extends "public/base.html" %}
 {% block title %}vsence问世{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{{ asset_url('/static/css/cascade.css') }}">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ asset_url('/static/css/case_layout.css') }}">{% endblock %}
 {% block content %}
 <!-- ===== Hero / STUDIO NOTE 轮播区 ===== -->
 <section class="hero">
@@ -98,36 +98,50 @@
   </div>
 </section>
 
-<!-- ===== 案例展示：Cascading Screens 风格错落自滚动墙 ===== -->
-<section class="case-cascade noise-texture">
+<!-- ===== 案例展示：左固定标题 + 右三列速度差滚动 ===== -->
+<section class="case-showcase-section noise-texture">
   <div class="container">
-    <div class="case-cascade__head">
-      <div>
-        <span class="case-cascade__eyebrow"></span>
-        <h2 class="section-title">案例展示 <span>Project</span></h2>
+    <div class="case-showcase">
+      <!-- 左侧固定区（不参与滚动，始终悬浮） -->
+      <div class="case-header">
+        <h2 class="case-header__title">案例展示 <span>Project</span></h2>
+        <a href="/projects" class="btn-more">查看更多案例 <span class="arr">→</span></a>
       </div>
-    </div>
 
-    <div class="case-cascade__cols">
-      {% for col in case_columns %}
-      <div class="case-cascade__col case-cascade__col--{{ ['a','b','c'][loop.index0] }}">
-        {% for copy in [1, 2] %}
-          {% for case in col %}
-          <a class="case-card" href="/projects/{{ case.id }}"{% if copy == 2 %} aria-hidden="true"{% endif %}>
+      <!-- 右侧滚动区：三列，速度差 30s / 20s / 26s -->
+      <div class="case-scroll-container">
+        <div class="scroll-column col-1">
+          {% for _ in range(2) %}{% for case in cases %}<a class="case-card" href="/projects/{{ case.id }}">
             <img class="case-img" src="{{ case.cover_image }}" alt="{{ case.title }}" loading="lazy">
             <div class="case-info">
               <h3>{{ case.title }}</h3>
               <p>{% if case.area or case.category %}{% if case.area %}{{ case.area }}㎡{% endif %}{% if case.area and case.category %} · {% endif %}{{ case.category }}{% else %}{{ case.subtitle }}{% endif %}</p>
               {% if case.category %}<span class="case-tag">{{ case.category }}</span>{% endif %}
             </div>
-          </a>
-          {% endfor %}
-        {% endfor %}
+          </a>{% endfor %}{% endfor %}
+        </div>
+        <div class="scroll-column col-2">
+          {% for _ in range(2) %}{% for case in cases %}<a class="case-card" href="/projects/{{ case.id }}">
+            <img class="case-img" src="{{ case.cover_image }}" alt="{{ case.title }}" loading="lazy">
+            <div class="case-info">
+              <h3>{{ case.title }}</h3>
+              <p>{% if case.area or case.category %}{% if case.area %}{{ case.area }}㎡{% endif %}{% if case.area and case.category %} · {% endif %}{{ case.category }}{% else %}{{ case.subtitle }}{% endif %}</p>
+              {% if case.category %}<span class="case-tag">{{ case.category }}</span>{% endif %}
+            </div>
+          </a>{% endfor %}{% endfor %}
+        </div>
+        <div class="scroll-column col-3">
+          {% for _ in range(2) %}{% for case in cases %}<a class="case-card" href="/projects/{{ case.id }}">
+            <img class="case-img" src="{{ case.cover_image }}" alt="{{ case.title }}" loading="lazy">
+            <div class="case-info">
+              <h3>{{ case.title }}</h3>
+              <p>{% if case.area or case.category %}{% if case.area %}{{ case.area }}㎡{% endif %}{% if case.area and case.category %} · {% endif %}{{ case.category }}{% else %}{{ case.subtitle }}{% endif %}</p>
+              {% if case.category %}<span class="case-tag">{{ case.category }}</span>{% endif %}
+            </div>
+          </a>{% endfor %}{% endfor %}
+        </div>
       </div>
-      {% endfor %}
     </div>
-
-    <a class="case-cascade__more" href="/projects">查看更多案例 <span class="arr">→</span></a>
   </div>
 </section>
 
@@ -343,19 +357,6 @@ function attachWheelPager(root, nextFn, prevFn) {
       });
     });
   });
-})();
-</script>
-
-<!-- 触屏设备：触摸时暂停滚动，松开恢复（可选增强；hover 设备由 CSS 处理） -->
-<script>
-(function () {
-  var wall = document.querySelector('.case-cascade');
-  if (!wall) return;
-  var pause = function () { wall.classList.add('is-paused'); };
-  var resume = function () { wall.classList.remove('is-paused'); };
-  wall.addEventListener('touchstart', pause, { passive: true });
-  wall.addEventListener('touchend', resume, { passive: true });
-  wall.addEventListener('touchcancel', resume, { passive: true });
 })();
 </script>
 

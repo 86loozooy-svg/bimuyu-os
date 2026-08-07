@@ -69,20 +69,12 @@ async def home(request: Request):
                 "SELECT * FROM site_client_logos WHERE is_visible = 1 ORDER BY sort_order"
             ).fetchall()
         )
-    # 拆成 3 列（轮询），供首页错落滚动墙使用；案例较少时每列放全部，保证每列有足够的卡滚动
-    if len(cases) >= 9:
-        case_columns = [[], [], []]
-        for i, c in enumerate(cases):
-            case_columns[i % 3].append(c)
-    else:
-        case_columns = [list(cases), list(cases), list(cases)]
     return templates.TemplateResponse(
         "public/index.html",
         {
             "request": request,
             "studio": get_studio_profile(),
             "cases": cases,
-            "case_columns": case_columns,
             "contact": load_contact(),
             "site": load_site_config(),
             "client_logos": client_logos,
