@@ -99,49 +99,36 @@
 </section>
 
 <!-- ===== 案例展示：左固定标题 + 右三列速度差滚动 ===== -->
-<section class="case-showcase-section noise-texture">
-  <div class="container">
-    <div class="case-showcase">
-      <!-- 左侧固定区（不参与滚动，始终悬浮） -->
-      <div class="case-header">
-        <h2 class="case-header__title">案例展示 <span>Project</span></h2>
-        <a href="/projects" class="btn-more">查看更多案例 <span class="arr">→</span></a>
-      </div>
+<section class="case-showcase">
 
-      <!-- 右侧滚动区：三列，速度差 30s / 20s / 26s -->
-      <div class="case-scroll-container">
-        <div class="scroll-column col-1">
-          {% for _ in range(2) %}{% for case in cases %}<a class="case-card {{ case.size or 'medium' }}" href="/projects/{{ case.id }}">
-            <img class="case-img" src="{{ case.cover_image }}" alt="{{ case.title }}" loading="lazy">
-            <div class="case-info">
-              <h3>{{ case.title }}</h3>
-              <p>{% if case.area or case.category %}{% if case.area %}{{ case.area }}㎡{% endif %}{% if case.area and case.category %} · {% endif %}{{ case.category }}{% else %}{{ case.subtitle }}{% endif %}</p>
-              {% if case.category %}<span class="case-tag">{{ case.category }}</span>{% endif %}
-            </div>
-          </a>{% endfor %}{% endfor %}
-        </div>
-        <div class="scroll-column col-2">
-          {% for _ in range(2) %}{% for case in cases %}<a class="case-card {{ case.size or 'medium' }}" href="/projects/{{ case.id }}">
-            <img class="case-img" src="{{ case.cover_image }}" alt="{{ case.title }}" loading="lazy">
-            <div class="case-info">
-              <h3>{{ case.title }}</h3>
-              <p>{% if case.area or case.category %}{% if case.area %}{{ case.area }}㎡{% endif %}{% if case.area and case.category %} · {% endif %}{{ case.category }}{% else %}{{ case.subtitle }}{% endif %}</p>
-              {% if case.category %}<span class="case-tag">{{ case.category }}</span>{% endif %}
-            </div>
-          </a>{% endfor %}{% endfor %}
-        </div>
-        <div class="scroll-column col-3">
-          {% for _ in range(2) %}{% for case in cases %}<a class="case-card {{ case.size or 'medium' }}" href="/projects/{{ case.id }}">
-            <img class="case-img" src="{{ case.cover_image }}" alt="{{ case.title }}" loading="lazy">
-            <div class="case-info">
-              <h3>{{ case.title }}</h3>
-              <p>{% if case.area or case.category %}{% if case.area %}{{ case.area }}㎡{% endif %}{% if case.area and case.category %} · {% endif %}{{ case.category }}{% else %}{{ case.subtitle }}{% endif %}</p>
-              {% if case.category %}<span class="case-tag">{{ case.category }}</span>{% endif %}
-            </div>
-          </a>{% endfor %}{% endfor %}
-        </div>
-      </div>
+  <!-- 左侧悬浮文字区（顶层） -->
+  <div class="case-title">
+    <h2>案例展示<br><span>PROJECTS</span></h2>
+    <a href="/projects" class="case-more">查看更多案例 →</a>
+  </div>
+
+  <!-- 右侧滚动区（底层） -->
+  <div class="case-scroll">
+
+    <!-- 三列：速度差 30s / 20s / 26s，双重循环渲染两遍保证无缝 -->
+    <div class="scroll-col col-1">
+      {% for _ in range(2) %}{% for case in cases %}<div class="case-card" data-ratio="{{ case.ratio }}">
+        <img src="{{ case.cover_image }}" alt="{{ case.title }}" loading="lazy">
+      </div>{% endfor %}{% endfor %}
     </div>
+
+    <div class="scroll-col col-2">
+      {% for _ in range(2) %}{% for case in cases %}<div class="case-card" data-ratio="{{ case.ratio }}">
+        <img src="{{ case.cover_image }}" alt="{{ case.title }}" loading="lazy">
+      </div>{% endfor %}{% endfor %}
+    </div>
+
+    <div class="scroll-col col-3">
+      {% for _ in range(2) %}{% for case in cases %}<div class="case-card" data-ratio="{{ case.ratio }}">
+        <img src="{{ case.cover_image }}" alt="{{ case.title }}" loading="lazy">
+      </div>{% endfor %}{% endfor %}
+    </div>
+
   </div>
 </section>
 
