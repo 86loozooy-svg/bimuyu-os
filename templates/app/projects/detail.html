@@ -1,5 +1,5 @@
 {% extends "app/base.html" %}
-{% block title %}{{ project.name }} — Studio OS{% endblock %}
+{% block title %}{% if tab == 'overview' %}概览 · {{ project.name }}{% else %}{{ project.name }} · {{ project.client_name or '无客户' }}{% endif %} — vsence问世{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="/static/css/bom_budget.css">{% endblock %}
 {% block content %}
 <div class="app-header">

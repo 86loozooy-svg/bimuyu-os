@@ -1,0 +1,34 @@
+{% extends "public/base.html" %}
+{% block title %}近期动态 — vsence问世{% endblock %}
+{% block content %}
+<main>
+  <!-- ===== 近期动态 Hero ===== -->
+  <section class="news-hero">
+    <div class="container">
+      <span class="eyebrow">STUDIO NOTE</span>
+      <h1 class="page-title">近期动态</h1>
+      <p class="page-sub">项目、研究与工作室活动的最新记录。</p>
+    </div>
+  </section>
+
+  <!-- ===== 动态列表 ===== -->
+  <section class="news-list">
+    <div class="container">
+      {% for n in notes %}
+      <article class="news-card">
+        <a href="#" class="news-img-link">
+          <img src="{{ asset_url('/static/img/news/' ~ n.img) }}" alt="{{ n.title }}" loading="lazy">
+          <span class="news-tag">{{ n.tag }}</span>
+        </a>
+        <div class="news-body">
+          <time class="news-date">{{ n.date }}</time>
+          <h2 class="news-title">{{ n.title }}</h2>
+          <p class="news-summary">{{ n.summary }}</p>
+          <a href="#" class="news-more">阅读全文 →</a>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+</main>
+{% endblock %}

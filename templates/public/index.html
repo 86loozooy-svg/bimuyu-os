@@ -1,19 +1,99 @@
 {% extends "public/base.html" %}
-{% block title %}{{ studio.name or 'Studio OS' }} — 空间设计工作室{% endblock %}
+{% block title %}vsence问世{% endblock %}
 {% block content %}
-<!-- ===== Hero 大图区 ===== -->
+<!-- ===== Hero / STUDIO NOTE 轮播区 ===== -->
 <section class="hero">
-  <div class="hero-image" style="background: {{ site.hero_bg or 'linear-gradient(135deg, #3b332a 0%, #6b5d4f 50%, #2e2823 100%)' }};">
-    <div class="hero-overlay">
-      <h1 class="hero-title">{{ site.hero_title or 'SPACE DESIGN' }}</h1>
-      <p class="hero-sub">{{ site.hero_subtitle or '' }}</p>
-      <a href="{{ site.hero_btn_link or '/cases' }}" class="btn hero-btn">{{ site.hero_btn_text or '查看案例' }}</a>
+  <!-- 轮播容器（圆点在它外部下方） -->
+  <div class="hero-stage">
+    <div class="hero-image" style="background: {{ site.hero_bg or 'linear-gradient(135deg, #3b332a 0%, #6b5d4f 50%, #2e2823 100%)' }};">
+      <div class="hero-overlay">
+        <div class="hero-track">
+          <!-- 动态 1 -->
+          <div class="hero-slide active">
+            <span class="eyebrow">STUDIO NOTE</span>
+            <h1 class="hero-title">好空间应当同时服务于品牌、人与经营</h1>
+            <p class="hero-sub">近期我们聚焦于零售动线、餐饮体验与岛式美陈系统的重构，让空间不仅是视觉作品，也是可运转的商业场景。</p>
+            <a href="/news" class="animated-button hero-cta">
+              <span class="text">阅读近期动态</span>
+              <span class="arrow-slot">
+                <svg class="arr-1" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <svg class="arr-2" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <span class="circle"></span>
+            </a>
+          </div>
+          <!-- 动态 2 -->
+          <div class="hero-slide">
+            <span class="eyebrow">PROJECT UPDATE</span>
+            <h1 class="hero-title">零售动线重构：让顾客自然停留</h1>
+            <p class="hero-sub">通过货架节奏、视线引导和材质分区，把经过型空间转化为可停留、可体验、可转化的商业场景。</p>
+            <a href="/news" class="animated-button hero-cta">
+              <span class="text">阅读近期动态</span>
+              <span class="arrow-slot">
+                <svg class="arr-1" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <svg class="arr-2" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <span class="circle"></span>
+            </a>
+          </div>
+          <!-- 动态 3 -->
+          <div class="hero-slide">
+            <span class="eyebrow">FIELD NOTE</span>
+            <h1 class="hero-title">岛式美陈不是摆设，而是经营节点</h1>
+            <p class="hero-sub">我们把岛台、展陈与收银/取餐逻辑结合，使其同时承担展示、服务与转化功能。</p>
+            <a href="/news" class="animated-button hero-cta">
+              <span class="text">阅读近期动态</span>
+              <span class="arrow-slot">
+                <svg class="arr-1" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <svg class="arr-2" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <span class="circle"></span>
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
-  <div class="hero-dots">
-    <span class="dot active"></span>
-    <span class="dot"></span>
-    <span class="dot"></span>
+
+  <!-- 圆点：在 .hero-stage 外部正下方 -->
+  <div class="dots hero-dots">
+    <button type="button" class="dot active" data-index="0" aria-label="第 1 条动态"></button>
+    <button type="button" class="dot" data-index="1" aria-label="第 2 条动态"></button>
+    <button type="button" class="dot" data-index="2" aria-label="第 3 条动态"></button>
+  </div>
+
+  <!-- 移动端 Snap（动态，桌面端隐藏） -->
+  <div class="mobile-snap-container dynamic-snap" data-snap="hero">
+    <article class="mobile-snap-card">
+      <div class="snap-body">
+        <span class="snap-eyebrow">STUDIO NOTE</span>
+        <h3 class="snap-title">好空间应当同时服务于品牌、人与经营</h3>
+        <p class="snap-desc">近期我们聚焦于零售动线、餐饮体验与岛式美陈系统的重构，让空间不仅是视觉作品，也是可运转的商业场景。</p>
+        <a href="/news" class="animated-button hero-cta"><span class="text">阅读全文</span></a>
+      </div>
+    </article>
+    <article class="mobile-snap-card">
+      <div class="snap-body">
+        <span class="snap-eyebrow">PROJECT UPDATE</span>
+        <h3 class="snap-title">零售动线重构：让顾客自然停留</h3>
+        <p class="snap-desc">通过货架节奏、视线引导和材质分区，把经过型空间转化为可停留、可体验、可转化的商业场景。</p>
+        <a href="/news" class="animated-button hero-cta"><span class="text">阅读全文</span></a>
+      </div>
+    </article>
+    <article class="mobile-snap-card">
+      <div class="snap-body">
+        <span class="snap-eyebrow">FIELD NOTE</span>
+        <h3 class="snap-title">岛式美陈不是摆设，而是经营节点</h3>
+        <p class="snap-desc">我们把岛台、展陈与收银/取餐逻辑结合，使其同时承担展示、服务与转化功能。</p>
+        <a href="/news" class="animated-button hero-cta"><span class="text">阅读全文</span></a>
+      </div>
+    </article>
+  </div>
+  <!-- 圆点：在 snap 容器外部正下方（不再绝对定位在卡片内） -->
+  <div class="dots mobile-snap-dots" data-dots="hero">
+    <button class="dot active" type="button" data-index="0" aria-label="第 1 条动态"></button>
+    <button class="dot" type="button" data-index="1" aria-label="第 2 条动态"></button>
+    <button class="dot" type="button" data-index="2" aria-label="第 3 条动态"></button>
   </div>
 </section>
 
@@ -33,20 +113,243 @@
       </a>
       {% endfor %}
     </div>
-  </div>
-</section>
 
-<!-- ===== 业务板块 ===== -->
-<section class="biz-section">
-  <div class="container biz-grid">
-    <div class="biz-image"><img src="{{ site.biz_image or '/static/images/biz/biz-01.jpg' }}" alt="{{ site.biz_title or '创意视觉' }}"></div>
-    <div class="biz-text">
-      <h2>{{ site.biz_title or '创意视觉' }} <span>{{ site.biz_subtitle or 'Creative Design' }}</span></h2>
-      <p>{{ site.biz_text or '' }}</p>
-      <a href="{{ site.biz_btn_link or '/about' }}" class="btn">{{ site.biz_btn_text or '了解更多' }}</a>
+    <!-- 移动端 Snap（桌面端隐藏，≤768px 显示） -->
+    <div class="mobile-snap-container" data-snap="cases">
+      {% for case in cases %}
+      <article class="mobile-snap-card">
+        <img class="snap-img" src="{{ case.cover_image }}" alt="{{ case.title }}">
+        <div class="snap-body">
+          <h3 class="snap-title">{{ case.title }}</h3>
+          <p class="snap-desc">{{ case.subtitle }}</p>
+          <a href="/cases/{{ case.slug }}" class="animated-button"><span class="text">了解更多</span></a>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    <!-- 圆点：在 snap 容器外部正下方 -->
+    <div class="dots mobile-snap-dots" data-dots="cases">
+      {% for case in cases %}
+      <button class="dot{% if loop.first %} active{% endif %}" type="button" data-index="{{ loop.index0 }}" aria-label="第 {{ loop.index }} 个案例"></button>
+      {% endfor %}
     </div>
   </div>
 </section>
+
+<!-- ===== 业务板块（全宽通栏 Slider） ===== -->
+<section class="biz-section">
+  <h2 class="section-title">业务板块 <span>What We Do</span></h2>
+
+  <div class="biz-carousel" id="bizCarousel">
+    <button class="biz-arrow prev" type="button" aria-label="上一项业务">&#8249;</button>
+
+    <!-- slide 1 -->
+    <article class="biz-slide active">
+      <div class="biz-media">
+        <img src="{{ asset_url('/static/img/biz/creative.svg') }}" alt="">
+      </div>
+      <div class="biz-overlay">
+        <span class="biz-eyebrow">CREATIVE DESIGN</span>
+        <h3 class="biz-title">创意视觉</h3>
+        <p class="biz-desc">从品牌策略到空间落地，我们提供一体化的视觉解决方案，让每一个商业空间都成为品牌的最佳表达。</p>
+        <a href="/about" class="biz-btn">了解更多 →</a>
+      </div>
+    </article>
+
+    <!-- slide 2 -->
+    <article class="biz-slide">
+      <div class="biz-media">
+        <img src="{{ asset_url('/static/img/biz/space.svg') }}" alt="">
+      </div>
+      <div class="biz-overlay">
+        <span class="biz-eyebrow">SPACE DESIGN</span>
+        <h3 class="biz-title">空间设计</h3>
+        <p class="biz-desc">专注工装空间、零售与餐饮场景，以动线规划、材质叙事与灯光系统构建可经营的体验空间。</p>
+        <a href="/about" class="biz-btn">了解更多 →</a>
+      </div>
+    </article>
+
+    <!-- slide 3 -->
+    <article class="biz-slide">
+      <div class="biz-media">
+        <img src="{{ asset_url('/static/img/biz/island.svg') }}" alt="">
+      </div>
+      <div class="biz-overlay">
+        <span class="biz-eyebrow">ISLAND DISPLAY</span>
+        <h3 class="biz-title">岛式美陈</h3>
+        <p class="biz-desc">模块化可拆卸美陈系统，适配商场中庭快闪与品牌巡展，15 天搭建、3 天撤场。</p>
+        <a href="/about" class="biz-btn">了解更多 →</a>
+      </div>
+    </article>
+
+    <button class="biz-arrow next" type="button" aria-label="下一项业务">&#8250;</button>
+  </div>
+
+  <!-- 圆点：在 .biz-carousel 外部正下方，不在 slide 内部 -->
+  <div class="dots" data-target="biz-carousel">
+    <button class="dot active" type="button" data-index="0" aria-label="第 1 项业务"></button>
+    <button class="dot" type="button" data-index="1" aria-label="第 2 项业务"></button>
+    <button class="dot" type="button" data-index="2" aria-label="第 3 项业务"></button>
+  </div>
+</section>
+
+<script>
+var PREFERS_REDUCED_MOTION = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+function isMobileViewport() { return window.innerWidth <= 768; }
+
+/* ---------- 通用：桌面端 wheel / 触控板左右轻扫翻页（900ms 防抖；移动端与减少动效时不拦截） ---------- */
+function attachWheelPager(root, nextFn, prevFn) {
+  if (!root) return;
+  if (PREFERS_REDUCED_MOTION) return;
+  var lock = false;
+  root.addEventListener('wheel', function (e) {
+    if (isMobileViewport()) return;                 // 移动端交给原生 snap 滑动
+    var dx = e.deltaX, dy = e.deltaY;
+    if (Math.abs(dx) < 30) return;                  // 横向意图不明显不翻页
+    if (Math.abs(dy) > Math.abs(dx)) return;        // 垂直主导时放行页面滚动
+    e.preventDefault();
+    if (lock) return;
+    lock = true;
+    setTimeout(function () { lock = false; }, 800);
+    if (dx > 0) nextFn(); else prevFn();
+  }, { passive: false });
+}
+
+/* ---------- 业务板块：全宽通栏 Slider（圆点 + 左右箭头 + wheel 翻页） ---------- */
+(function () {
+  var carousel = document.getElementById('bizCarousel');
+  if (!carousel) return;
+  var slides = carousel.querySelectorAll('.biz-slide');
+  var dots = document.querySelectorAll('.biz-section .dots .dot');
+  if (!slides.length) return;
+  var current = 0, timer = null;
+
+  function goTo(i) {
+    current = (i + slides.length) % slides.length;
+    slides.forEach(function (s, idx) { s.classList.toggle('active', idx === current); });
+    dots.forEach(function (d, idx) {
+      var on = idx === current;
+      d.classList.toggle('active', on);
+      d.setAttribute('aria-current', on ? 'true' : 'false');
+    });
+    // 移动端：所有 slide 常驻，改为横向滚动到目标卡
+    if (isMobileViewport() && slides[current]) {
+      slides[current].scrollIntoView({
+        behavior: PREFERS_REDUCED_MOTION ? 'auto' : 'smooth',
+        inline: 'start',
+        block: 'nearest'
+      });
+    }
+  }
+  function next() { goTo(current + 1); }
+  function prev() { goTo(current - 1); }
+
+  dots.forEach(function (d, i) {
+    d.addEventListener('click', function () { goTo(parseInt(d.dataset.index, 10) || i); });
+  });
+
+  var prevBtn = carousel.querySelector('.biz-arrow.prev');
+  var nextBtn = carousel.querySelector('.biz-arrow.next');
+  if (prevBtn) prevBtn.addEventListener('click', prev);
+  if (nextBtn) nextBtn.addEventListener('click', next);
+
+  // 自动播放 6s（仅桌面端；hover 暂停；减少动效时关闭）
+  if (!PREFERS_REDUCED_MOTION) {
+    var startAuto = function () {
+      if (timer || isMobileViewport()) return;
+      timer = setInterval(function () { if (!isMobileViewport()) next(); }, 6000);
+    };
+    var stopAuto = function () { if (timer) { clearInterval(timer); timer = null; } };
+    carousel.addEventListener('mouseenter', stopAuto);
+    carousel.addEventListener('mouseleave', startAuto);
+    startAuto();
+  }
+
+  attachWheelPager(carousel, next, prev);
+})();
+
+/* ---------- 首页 Hero / STUDIO NOTE 轮播 ---------- */
+(function () {
+  var hero = document.querySelector('.hero');
+  if (!hero) return;
+  var slides = hero.querySelectorAll('.hero-slide');
+  var dots = hero.querySelectorAll('.hero-dots .dot');
+  if (slides.length < 2) return;
+  var current = 0, timer = null;
+
+  function go(i) {
+    current = (i + slides.length) % slides.length;
+    slides.forEach(function (s, idx) { s.classList.toggle('active', idx === current); });
+    dots.forEach(function (d, idx) {
+      var on = idx === current;
+      d.classList.toggle('active', on);
+      d.setAttribute('aria-current', on ? 'true' : 'false');
+    });
+  }
+  function next() { go(current + 1); }
+  function prev() { go(current - 1); }
+
+  dots.forEach(function (d) {
+    d.addEventListener('click', function () { go(parseInt(d.dataset.index, 10)); });
+  });
+
+  // 自动播放 6s, hover 暂停; 开启"减少动效"时关闭自动播放
+  if (!PREFERS_REDUCED_MOTION) {
+    var start = function () { if (!timer) timer = setInterval(next, 6000); };
+    var stop = function () { if (timer) { clearInterval(timer); timer = null; } };
+    hero.addEventListener('mouseenter', stop);
+    hero.addEventListener('mouseleave', start);
+    start();
+  }
+
+  attachWheelPager(hero, next, prev);
+})();
+
+/* ---------- 通用：Snap 容器圆点联动（移动端卡片 + 业务通栏） ---------- */
+(function () {
+  if (!('IntersectionObserver' in window)) return;
+  var containers = document.querySelectorAll('.mobile-snap-container, .biz-carousel');
+
+  containers.forEach(function (container) {
+    // 圆点容器一律在 snap 容器的外部（同级），按 data-dots 配对，找不到就取同级第一个 .dots
+    var key = container.getAttribute('data-snap');
+    var dotsWrap = key ? document.querySelector('.dots[data-dots="' + key + '"]') : null;
+    if (!dotsWrap && container.parentElement) {
+      dotsWrap = container.parentElement.querySelector(':scope > .dots');
+    }
+    if (!dotsWrap) return;
+
+    var dots = dotsWrap.querySelectorAll('.dot');
+    var cards = container.querySelectorAll('.mobile-snap-card, .biz-slide');
+    if (!dots.length || !cards.length) return;
+
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting && e.intersectionRatio >= 0.6) {
+          var idx = Array.prototype.indexOf.call(cards, e.target);
+          if (idx >= 0) dots.forEach(function (d, i) { d.classList.toggle('active', i === idx); });
+        }
+      });
+    }, { root: container, threshold: [0.6] });
+
+    Array.prototype.forEach.call(cards, function (c) { obs.observe(c); });
+
+    // 点击圆点滚动：业务通栏的点击已由自身 slider 脚本接管，这里只处理移动端卡片容器
+    if (!container.classList.contains('mobile-snap-container')) return;
+    dots.forEach(function (d, i) {
+      d.addEventListener('click', function () {
+        var idx = parseInt(d.getAttribute('data-index'), 10);
+        if (isNaN(idx)) idx = i;
+        if (cards[idx]) cards[idx].scrollIntoView({
+          behavior: PREFERS_REDUCED_MOTION ? 'auto' : 'smooth',
+          inline: 'start',
+          block: 'nearest'
+        });
+      });
+    });
+  });
+})();
+</script>
 
 <!-- ===== 合作伙伴 ===== -->
 <section class="clients-section">

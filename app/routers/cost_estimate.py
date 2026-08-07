@@ -360,10 +360,24 @@ async def ai_chat(request: Request, user: dict = Depends(get_current_user)):
 
 # ── 前端页面 ───────────────────────────────────────────────────────────────
 @router.get("/app/calculator/cost-estimate", response_class=HTMLResponse)
-async def cost_estimate_page(request: Request, user: dict = Depends(get_current_user)):
+async def cost_estimate_page(
+    request: Request,
+    user: dict = Depends(get_current_user),
+    project_id: int | None = None,
+):
+    project = None
+    if project_id:
+        with db_session() as conn:
+            row = conn.execute(
+                "SELECT p.*, c.name as client_name FROM projects p "
+                "LEFT JOIN clients c ON p.client_id = c.id WHERE p.id = ?",
+                (project_id,),
+            ).fetchone()
+            if row:
+                project = row_to_dict(row)
     return templates.TemplateResponse(
         "app/calculator/cost_estimate.html",
-        {"request": request, "user": user},
+        {"request": request, "user": user, "project": project},
     )
 
 
