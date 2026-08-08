@@ -98,37 +98,35 @@
   </div>
 </section>
 
-<!-- ===== 案例展示：左固定标题 + 右三列速度差滚动 ===== -->
+<!-- ===== 案例展示：左悬浮标题 + 右整面网格匀速轮播（悬停停、滚轮接管） ===== -->
+{% macro case_unit(cases) %}
+<div class="case-grid">
+  {% for case in cases %}
+  {% if case.placeholder %}
+  <div class="case-card {{ case.size }} is-placeholder"><span>敬请期待</span></div>
+  {% else %}
+  <a class="case-card {{ case.size }}" href="/projects/{{ case.id }}">
+    <img src="{{ case.cover_image }}" alt="{{ case.title }}" loading="lazy">
+  </a>
+  {% endif %}
+  {% endfor %}
+</div>
+{% endmacro %}
+
 <section class="case-showcase">
 
-  <!-- 左侧悬浮文字区（顶层） -->
+  <!-- 左侧悬浮文字区（顶层，叠在网格上方） -->
   <div class="case-title">
     <h2>案例展示<br><span>PROJECTS</span></h2>
     <a href="/projects" class="case-more">查看更多案例 →</a>
   </div>
 
-  <!-- 右侧滚动区（底层） -->
+  <!-- 右侧滚动区（底层）：整面网格墙，JS 驱动匀速上滚 + 滚轮接管 -->
   <div class="case-scroll">
-
-    <!-- 三列：速度差 30s / 20s / 26s，双重循环渲染两遍保证无缝 -->
-    <div class="scroll-col col-1">
-      {% for _ in range(2) %}{% for case in cases %}<div class="case-card" data-ratio="{{ case.ratio }}">
-        <img src="{{ case.cover_image }}" alt="{{ case.title }}" loading="lazy">
-      </div>{% endfor %}{% endfor %}
+    <div class="case-grid-wrapper">
+      {{ case_unit(cases) }}
+      {{ case_unit(cases) }}
     </div>
-
-    <div class="scroll-col col-2">
-      {% for _ in range(2) %}{% for case in cases %}<div class="case-card" data-ratio="{{ case.ratio }}">
-        <img src="{{ case.cover_image }}" alt="{{ case.title }}" loading="lazy">
-      </div>{% endfor %}{% endfor %}
-    </div>
-
-    <div class="scroll-col col-3">
-      {% for _ in range(2) %}{% for case in cases %}<div class="case-card" data-ratio="{{ case.ratio }}">
-        <img src="{{ case.cover_image }}" alt="{{ case.title }}" loading="lazy">
-      </div>{% endfor %}{% endfor %}
-    </div>
-
   </div>
 </section>
 
@@ -344,6 +342,66 @@ function attachWheelPager(root, nextFn, prevFn) {
       });
     });
   });
+})();
+
+/* ---------- 首页案例展示：整面网格匀速轮播 + 滚轮接管（桌面端） ---------- */
+(function () {
+  var scroll = document.querySelector('.case-scroll');
+  var wrapper = document.querySelector('.case-grid-wrapper');
+  if (!scroll || !wrapper) return;
+
+  // 计算每块卡片占用的行数（grid-auto-rows:8px + row-gap:16px），实现紧密咬合的 masonry
+  var ROW = 8, GAP = 16;
+  function layoutMasonry(gridEl) {
+    gridEl.querySelectorAll('.case-card').forEach(function (card) {
+      var h = card.getBoundingClientRect().height;
+      var span = Math.max(1, Math.ceil((h + GAP) / (ROW + GAP)));
+      card.style.gridRowEnd = 'span ' + span;
+    });
+  }
+  var grids = wrapper.querySelectorAll('.case-grid');
+  grids.forEach(layoutMasonry);
+  var onResize;
+  window.addEventListener('resize', function () {
+    clearTimeout(onResize);
+    onResize = setTimeout(function () { grids.forEach(layoutMasonry); }, 150);
+  });
+
+  // 移动端：整墙改为原生滚动，不接管滚轮、不自动轮播
+  if (isMobileViewport()) {
+    wrapper.style.transform = 'translateY(0)';
+    return;
+  }
+
+  var y = 0;
+  var auto = !PREFERS_REDUCED_MOTION;   // 减少动效时默认静止，仍可被滚轮接管
+  var AUTO_SPEED = 0.45;                // 自动轮播速度 px/帧
+
+  function unitHeight() { return wrapper.scrollHeight / 2; }   // 网格复制两份
+  function wrap(v) {
+    var u = unitHeight();
+    v = v % u;
+    if (v > 0) v -= u;                   // 收拢到 (-u, 0]，保证无缝循环
+    return v;
+  }
+  function frame() {
+    if (auto) y = wrap(y - AUTO_SPEED);
+    wrapper.style.transform = 'translateY(' + y + 'px)';
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // 鼠标进入区域 → 暂停自动轮播
+  scroll.addEventListener('mouseenter', function () { auto = false; });
+  // 鼠标移出区域 → 恢复自动轮播（从当前位置继续）
+  scroll.addEventListener('mouseleave', function () { auto = true; });
+  // 区域内滚轮 → 按 deltaY 控制网格上/下（速度随滚轮）；阻止页面自身滚动
+  scroll.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    auto = false;
+    y = wrap(y - e.deltaY);
+    wrapper.style.transform = 'translateY(' + y + 'px)';
+  }, { passive: false });
 })();
 </script>
 

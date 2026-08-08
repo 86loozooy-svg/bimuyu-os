@@ -60,7 +60,7 @@ def load_site_config() -> dict:
 @router.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     with db_session() as conn:
-        cases = rows_to_list(
+        raw_cases = rows_to_list(
             conn.execute(
                 "SELECT * FROM cases WHERE is_online = 1 ORDER BY sort_order, id DESC"
             ).fetchall()
@@ -70,15 +70,38 @@ async def home(request: Request):
                 "SELECT * FROM site_client_logos WHERE is_visible = 1 ORDER BY sort_order"
             ).fetchall()
         )
-    # 为每个案例随机分配展示比例，形成不规则瀑布流错落感（双份渲染共用同一 ratio，保证无缝）
-    for c in cases:
-        c["ratio"] = random.choice(("16x9", "4x3", "1x1"))
+
+    # 案例展示的「大小节奏」：18 项固定序列（6 竖 / 6 宽 / 6 方），相邻错开 → 排版节奏稳定。
+    # 案例不足 18 张时的对策：循环复用真实案例，保证「大小节奏」与「无缝滚动所需内容量」不变；
+    # 若库里完全没有在线案例，则用占位卡填满（不显示真实图片，但排版节奏一致）。
+    CASE_SIZE_RHYTHM = [
+        'portrait', 'wide', 'square', 'wide', 'portrait', 'square',
+        'square', 'wide', 'portrait', 'portrait', 'square', 'wide',
+        'portrait', 'square', 'wide', 'wide', 'square', 'portrait',
+    ]
+    MIN_CASES_PER_UNIT = 18  # 一个循环单元的最少卡片数（不足则循环复用）
+
+    if raw_cases:
+        unit_cases = []
+        i = 0
+        while len(unit_cases) < MIN_CASES_PER_UNIT:
+            src = raw_cases[i % len(raw_cases)]
+            c = dict(src)                       # 复制，避免污染原始列表
+            c["size"] = CASE_SIZE_RHYTHM[i % len(CASE_SIZE_RHYTHM)]
+            unit_cases.append(c)
+            i += 1
+    else:
+        unit_cases = [
+            {"id": 0, "title": "敬请期待", "cover_image": "", "size": s, "placeholder": True}
+            for s in CASE_SIZE_RHYTHM
+        ]
+
     return templates.TemplateResponse(
         "public/index.html",
         {
             "request": request,
             "studio": get_studio_profile(),
-            "cases": cases,
+            "cases": unit_cases,            # 一个单元（模板渲染两遍 → 无缝循环）
             "contact": load_contact(),
             "site": load_site_config(),
             "client_logos": client_logos,
