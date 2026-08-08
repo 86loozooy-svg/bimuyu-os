@@ -133,12 +133,14 @@
   text-decoration: none;
   border-radius: 100px;
   font-size: 14px;
+  font-weight: 300;           /* 与全站按钮字重统一 */
   background: transparent;
   transition: all .3s ease;
 }
 .case-more:hover {
-  background: var(--case-accent);
-  border-color: var(--case-accent);
+  background: var(--accent-signature);   /* 与 .animated-button / .biz-btn 统一 hover 填充 */
+  border-color: var(--accent-signature);
+  color: #1a1614;
 }
 
 /* ===== 移动端：左标题置顶，网格降为 6 列（比例同除以 2），整墙改为原生滚动 ===== */

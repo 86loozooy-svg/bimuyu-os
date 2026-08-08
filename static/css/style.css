@@ -614,8 +614,10 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
   border-radius: 100px;
   font-family: "Prompt", "Noto Sans SC", sans-serif;
   font-size: 14px;
+  font-weight: 300;           /* 与 .animated-button / .case-more 统一字重 */
   text-decoration: none;
   cursor: pointer;
+  transition: all .3s ease;  /* 与全站按钮 hover 过渡统一 */
   transition: all 0.4s ease;
 }
 .biz-btn:hover {
@@ -1263,6 +1265,8 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
   border-color: #d9d3ca;
   height: 65px;
   padding: 0 40px;
+  font-size: 14px;            /* 与 .biz-btn / .case-more 统一字号 */
+  font-weight: 300;           /* 与全站按钮字重统一 */
 }
 .animated-button.hero-cta .arr-1 { color: #d9d3ca; }
 .animated-button.hero-cta:hover {
