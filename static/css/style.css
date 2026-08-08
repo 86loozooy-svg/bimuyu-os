@@ -621,9 +621,9 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
   transition: all 0.4s ease;
 }
 .biz-btn:hover {
-  border-color: var(--accent-signature);
+  border-color: var(--case-accent);     /* greenyellow 品牌主色，hover 变黄与全站一致 */
   color: #1a1614;
-  background: var(--accent-signature);
+  background: var(--case-accent);
   text-decoration: none;      /* 覆盖全局 a:hover 下划线 */
 }
 
@@ -1270,10 +1270,10 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
 }
 .animated-button.hero-cta .arr-1 { color: #d9d3ca; }
 .animated-button.hero-cta:hover {
-  background-color: var(--accent-signature);
-  border-color: #d9d3ca;
-  color: #212121;
-  box-shadow: 0 0 0 1px #d9d3ca;
+  background-color: var(--case-accent);   /* greenyellow 品牌主色，hover 变黄与全站一致 */
+  border-color: var(--case-accent);
+  color: #1a1614;
+  box-shadow: 0 0 0 1px var(--case-accent);
 }
 .animated-button.hero-cta:hover .arr-2 { color: #212121; }
 

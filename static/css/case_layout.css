@@ -138,8 +138,8 @@
   transition: all .3s ease;
 }
 .case-more:hover {
-  background: var(--accent-signature);   /* 与 .animated-button / .biz-btn 统一 hover 填充 */
-  border-color: var(--accent-signature);
+  background: var(--case-accent);        /* greenyellow 品牌主色，hover 变黄与全站一致 */
+  border-color: var(--case-accent);
   color: #1a1614;
 }
 
