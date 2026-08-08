@@ -53,6 +53,8 @@
           </div>
         </div>
       </div>
+      <button class="hero-arrow prev" type="button" aria-label="上一条动态">&#8249;</button>
+      <button class="hero-arrow next" type="button" aria-label="下一条动态">&#8250;</button>
     </div>
   </div>
 
@@ -286,6 +288,12 @@ function attachWheelPager(root, nextFn, prevFn) {
   dots.forEach(function (d) {
     d.addEventListener('click', function () { go(parseInt(d.dataset.index, 10)); });
   });
+
+  // 左右箭头（桌面端 hover 显示）
+  var prevBtn = hero.querySelector('.hero-arrow.prev');
+  var nextBtn = hero.querySelector('.hero-arrow.next');
+  if (prevBtn) prevBtn.addEventListener('click', prev);
+  if (nextBtn) nextBtn.addEventListener('click', next);
 
   // 自动播放 6s, hover 暂停; 开启"减少动效"时关闭自动播放
   if (!PREFERS_REDUCED_MOTION) {
