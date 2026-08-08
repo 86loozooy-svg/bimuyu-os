@@ -650,6 +650,7 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
 @media (max-width: 768px) {
   .biz-section { padding: 48px 16px; }
   .biz-section .section-title { margin-bottom: 20px; }
+  .clients-section .container { padding: 0 16px; }
   /* 板块大标题移动端降档，避免 80px 溢出折行 */
   .biz-section .section-title,
   .clients-section .section-title { font-size: 44px; }
@@ -703,6 +704,13 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
 .clients-section {
   padding: 60px 0;
   background: var(--bg);
+}
+/* 让合作伙伴标题左边缘与上方全宽板块(能力版图/案例展示)对齐：
+   解除内层 .container 的居中限宽，改为全宽 + 40px 同款左右内边距 */
+.clients-section .container {
+  max-width: none;
+  margin: 0;
+  padding: 0 40px;
 }
 
 .clients-row {
