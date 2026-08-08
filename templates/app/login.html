@@ -14,32 +14,64 @@
 </head>
 <body>
   <div class="login-page">
-    <div class="login-box" style="width:100%;max-width:420px">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px">
-        <span class="brand-mark" aria-hidden="true"></span>
-        <h1 style="margin:0;font-size:1.25rem">Studio OS</h1>
+    <aside class="login-promo">
+      <div class="login-promo-content">
+        <div class="login-promo-brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span class="login-promo-name">Studio OS</span>
+        </div>
+        <h2 class="login-promo-title">设计工作室的<br>经营操作系统</h2>
+        <p class="login-promo-desc">预算、物料、施工、待办、案例、客户，一个工作台全链路管理。</p>
+
+        <nav class="login-promo-links">
+          <a href="#" class="login-promo-link">
+            <i data-lucide="book-open" style="width:18px;height:18px"></i>
+            <span>使用说明</span>
+          </a>
+          <a href="#" class="login-promo-link">
+            <i data-lucide="download" style="width:18px;height:18px"></i>
+            <span>下载客户端</span>
+          </a>
+          <a href="#" class="login-promo-link">
+            <i data-lucide="help-circle" style="width:18px;height:18px"></i>
+            <span>帮助与支持</span>
+          </a>
+        </nav>
       </div>
-      <p style="color:var(--color-text-secondary);font-size:.875rem;margin-bottom:24px">登录管理工作台</p>
-      {% if error %}<p class="error">{{ error }}</p>{% endif %}
-      <form method="post" action="/app/login">
-        <div class="form-group">
-          <label>邮箱或登录名</label>
-          <input type="text" name="identifier" required placeholder="请输入邮箱或登录名" autocomplete="username">
+
+      <div class="login-promo-foot">
+        <span>© vsence问世</span>
+        <a href="/">返回公开站 →</a>
+      </div>
+    </aside>
+
+    <main class="login-form-panel">
+      <div class="login-box">
+        <div class="login-box-brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <h1 style="margin:0;font-size:1.25rem">Studio OS</h1>
         </div>
-        <div class="form-group">
-          <label>密码</label>
-          <input type="password" name="password" required>
-        </div>
-        <button type="submit" class="btn btn-primary" style="width:100%">
-          <i data-lucide="log-in" style="width:14px;height:14px"></i>
-          登录
-        </button>
-      </form>
-      <p style="text-align:center;margin-top:20px;font-size:.8rem;color:var(--color-text-muted)">
-        默认账号：admin@studio.local / admin123<br>
-        <a href="/" style="color:var(--color-text-secondary)">← 返回公开站</a>
-      </p>
-    </div>
+        <p class="login-box-subtitle">登录管理工作台</p>
+        {% if error %}<p class="error">{{ error }}</p>{% endif %}
+        <form method="post" action="/app/login">
+          <div class="form-group">
+            <label>邮箱或登录名</label>
+            <input type="text" name="identifier" required placeholder="请输入邮箱或登录名" autocomplete="username">
+          </div>
+          <div class="form-group">
+            <label>密码</label>
+            <input type="password" name="password" required>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%">
+            <i data-lucide="log-in" style="width:14px;height:14px"></i>
+            登录
+          </button>
+        </form>
+        <p style="text-align:center;margin-top:20px;font-size:.8rem;color:var(--color-text-muted)">
+          默认账号：admin@studio.local / admin123
+        </p>
+      </div>
+    </main>
   </div>
 
   <script>
