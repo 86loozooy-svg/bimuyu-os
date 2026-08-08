@@ -98,8 +98,8 @@
   position: absolute;
   z-index: 2;
   top: 0; left: 0;
-  width: 30%;
-  padding: 60px 40px;
+  width: 50%;                       /* 容器放大，容纳 80px 大标题 */
+  padding: 60px 44px;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -108,16 +108,18 @@
   color: var(--case-ink);
 }
 .case-title h2 {
-  font-size: 44px;
-  font-weight: 700;
-  line-height: 1.1;
+  font-size: 80px;
+  font-weight: 400;
+  line-height: 1.2;
   text-shadow: 0 2px 14px rgba(244, 242, 239, .7);
 }
 .case-title h2 span {
   display: block;
-  font-size: 14px;
+  font-size: 80px;
+  font-weight: 400;
+  line-height: 1.2;
   letter-spacing: .25em;
-  color: var(--case-muted);
+  color: var(--case-ink);          /* 黑色（与中文一致） */
   margin-top: 10px;
 }
 .case-more {
@@ -144,6 +146,12 @@
     position: relative;
     width: 100%;
     padding: 40px 20px;
+  }
+  /* 移动端大标题降一档，避免 80px 在小屏溢出折行 */
+  .case-title h2,
+  .case-title h2 span {
+    font-size: 44px;
+    letter-spacing: .12em;
   }
   .case-scroll { padding: 0 20px 40px; height: auto; }
   .case-grid {
