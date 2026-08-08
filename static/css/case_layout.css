@@ -118,7 +118,7 @@
   font-size: 80px;
   font-weight: 400;
   line-height: 1.2;
-  letter-spacing: .25em;
+  letter-spacing: .08em;           /* 收紧：原 .25em 在 80px 下过宽 */
   color: var(--case-ink);          /* 黑色（与中文一致） */
   margin-top: 10px;
 }
