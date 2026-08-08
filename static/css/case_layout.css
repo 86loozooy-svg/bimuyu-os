@@ -125,7 +125,9 @@
 .case-more {
   align-self: flex-start;
   pointer-events: auto;                /* 按钮可点击 */
-  padding: 10px 24px;
+  height: 65px;
+  padding: 0 40px;
+  line-height: 63px;
   border: 1px solid var(--case-muted);
   color: var(--case-ink);
   text-decoration: none;

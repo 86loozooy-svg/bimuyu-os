@@ -74,7 +74,7 @@ a:hover { text-decoration: underline; }
 .site-links a:hover { color: var(--text); text-decoration: none; }
 
 .hero {
-  padding: 80px 0 60px;
+  padding: 0;
   text-align: center;
 }
 .hero h1 {
@@ -331,8 +331,8 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
 .hero-stage {
   position: relative;
   width: 100%;
-  height: 80vh;
-  min-height: 500px;
+  height: 100vh;
+  min-height: 600px;
   overflow: hidden;
 }
 
@@ -343,14 +343,14 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
   background-size: cover;
   background-position: center;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
 }
 
 .hero-overlay {
   text-align: center;
   color: #fff;
-  padding: 0 20px;
+  padding: 120px 20px 60px;
 }
 
 .hero-title {
@@ -525,7 +525,7 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
    ========================================================= */
 .biz-section {
   width: 100%;
-  padding: 80px 40px;
+  padding: 80px 0;
   background: #fff;
   box-sizing: border-box;
 }
@@ -541,8 +541,8 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
 .biz-slide {
   position: relative;
   width: 100%;
-  height: 520px;
-  border-radius: 28px;
+  height: 640px;
+  border-radius: 0;
   overflow: hidden;
   background: #1a1614;
   display: none;              /* 桌面端由 JS 控制显隐 */
@@ -607,7 +607,9 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
   border: 1px solid rgba(245, 240, 232, 0.6);
   color: #f5f0e8;
   background: transparent;
-  padding: 12px 28px;
+  height: 65px;
+  padding: 0 40px;
+  line-height: 63px;
   border-radius: 100px;
   font-family: "Prompt", "Noto Sans SC", sans-serif;
   font-size: 14px;
@@ -648,8 +650,8 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
 
 /* 移动端：横向 snap 滑动，所有 slide 常驻 */
 @media (max-width: 768px) {
-  .biz-section { padding: 48px 16px; }
-  .biz-section .section-title { margin-bottom: 20px; }
+  .biz-section { padding: 48px 0; }
+  .biz-section .section-title { margin-bottom: 20px; padding: 0 16px; }
   .clients-section .container { padding: 0 16px; }
   /* 板块大标题移动端降档，避免 80px 溢出折行 */
   .biz-section .section-title,
@@ -668,11 +670,11 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
   .biz-carousel::-webkit-scrollbar { display: none; }
 
   .biz-slide {
-    flex: 0 0 calc(100vw - 40px);
+    flex: 0 0 100vw;
     scroll-snap-align: start;
     scroll-snap-stop: always;
-    height: 360px;
-    border-radius: 20px;
+    height: 420px;
+    border-radius: 0;
     display: block;             /* 移动端全部显示，靠 scroll 翻 */
   }
 
@@ -1256,6 +1258,8 @@ th { color: var(--muted); font-weight: 500; font-size: .8rem; }
 .animated-button.hero-cta {
   color: #d9d3ca;
   border-color: #d9d3ca;
+  height: 65px;
+  padding: 0 40px;
 }
 .animated-button.hero-cta .arr-1 { color: #d9d3ca; }
 .animated-button.hero-cta:hover {
