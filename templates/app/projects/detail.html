@@ -819,6 +819,56 @@ loadCatalogAndPresets();
 {% endif %}
 
 {% elif tab == 'finance' and show_finance %}
+{# ── 项目损益 P&L（P1） ── #}
+<div class="finance-head">
+  <h3 class="finance-head__title">项目损益 · P&amp;L</h3>
+  <div class="finance-export">
+    <button type="button" class="btn btn-sm finance-export__btn" id="financeExportBtn" aria-haspopup="true" aria-expanded="false">导出 ▾</button>
+    <div class="finance-export__menu" id="financeExportMenu" hidden>
+      <button type="button" data-export="png">导出 PNG (2x)</button>
+      <a href="/app/projects/{{ project.id }}/finance.pdf" data-export="pdf" download>导出 PDF (A4 横)</a>
+    </div>
+  </div>
+</div>
+
+<div class="finance-grid">
+  <div class="card finance-stat">
+    <span class="finance-stat__label">收入 Revenue</span>
+    <span class="finance-stat__value">{{ '¥{:,.0f}'.format(finance_pnl.revenue or 0) }}</span>
+  </div>
+  <div class="card finance-stat">
+    <span class="finance-stat__label">成本 Cost</span>
+    <span class="finance-stat__value" style="color:var(--color-error)">{{ '¥{:,.0f}'.format(finance_pnl.cost or 0) }}</span>
+  </div>
+  <div class="card finance-stat">
+    <span class="finance-stat__label">利润 Profit</span>
+    <span class="finance-stat__value" style="color:var(--color-success)">{{ '¥{:,.0f}'.format(finance_pnl.profit or 0) }}</span>
+  </div>
+</div>
+
+<div class="card finance-charts">
+  <div class="finance-charts__donut">
+    <div class="finance-charts__cap">收入构成（成本 / 利润）</div>
+    <svg id="pnlDonut" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="收入成本利润环形图"></svg>
+    <div class="finance-legend">
+      <span><i style="background:var(--color-error)"></i>成本 {{ '¥{:,.0f}'.format(finance_pnl.cost or 0) }}</span>
+      <span><i style="background:var(--color-success)"></i>利润 {{ '¥{:,.0f}'.format(finance_pnl.profit or 0) }}</span>
+      <span><i style="background:var(--color-primary)"></i>收入 {{ '¥{:,.0f}'.format(finance_pnl.revenue or 0) }}</span>
+    </div>
+  </div>
+  <div class="finance-charts__line">
+    <div class="finance-charts__cap">毛利率走势（按里程碑）</div>
+    <svg id="pnlLine" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="毛利率折线图"></svg>
+  </div>
+</div>
+
+<script>
+  window.__PNL__ = {{ finance_pnl | tojson }};
+  window.__CURVE__ = {{ milestone_curve | tojson }};
+  window.__PROJ_CODE__ = "{{ project.code }}";
+</script>
+<script src="/static/js/finance_charts.js"></script>
+
 {# ── 收款汇总 ── #}
 {% set ns = namespace(total=0, paid=0, unpaid=0) %}
 {% for inv in invoices %}

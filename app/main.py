@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import BASE_DIR
-from app.routers import app_auth, app_dashboard, budget, calculator, catalog, cost_estimate, library, projects, public, quotes, settings, tasks, workers
+from app.routers import account, app_auth, app_dashboard, budget, calculator, catalog, cost_estimate, library, notifications, onboarding, placeholders, projects, public, quotes, settings, share, tasks, workers
 
 app = FastAPI(title="Studio OS", version="1.0.0", docs_url=None, redoc_url=None)
 
@@ -41,6 +41,7 @@ app.add_middleware(AppAuthMiddleware)
 app.include_router(public.router)
 app.include_router(app_auth.router)
 app.include_router(app_dashboard.router)
+app.include_router(app_dashboard.router_root)
 app.include_router(projects.router)
 app.include_router(library.router)
 app.include_router(quotes.router)
@@ -51,6 +52,12 @@ app.include_router(budget.router)
 app.include_router(settings.router)
 app.include_router(workers.router)
 app.include_router(tasks.router)
+app.include_router(notifications.router)
+app.include_router(placeholders.router)
+app.include_router(share.router)
+app.include_router(share.public_router)
+app.include_router(onboarding.router)
+app.include_router(account.router)
 
 
 @app.on_event("startup")
@@ -78,6 +85,29 @@ def _startup_ensure_schema() -> None:
     except Exception as exc:  # noqa: BLE001
         import logging
         logging.getLogger("uvicorn.error").warning("cases 列迁移跳过: %s", exc)
+    try:
+        from app.init_db import ensure_pnl_columns
+
+        ensure_pnl_columns()
+    except Exception as exc:  # noqa: BLE001
+        import logging
+        logging.getLogger("uvicorn.error").warning("P&L 列迁移跳过: %s", exc)
+    try:
+        from app.init_db import ensure_notifications
+
+        ensure_notifications()
+    except Exception as exc:  # noqa: BLE001
+        import logging
+
+        logging.getLogger("uvicorn.error").warning("通知表迁移跳过: %s", exc)
+    try:
+        from app.init_db import _migrate_schema
+
+        _migrate_schema()
+    except Exception as exc:  # noqa: BLE001
+        import logging
+
+        logging.getLogger("uvicorn.error").warning("迁移脚本跳过: %s", exc)
     _startup_scheduler()
 
 
@@ -107,9 +137,25 @@ def _startup_scheduler() -> None:
         sched.add_job(
             push.scan_and_push, "cron", hour=hour, minute=minute, id="daily_task_push"
         )
+        # P0：每日凌晨 03:00 重算全部项目损益派生字段（落库，降低前端复杂度）
+        from app.services import pnl as pnl_service
+
+        sched.add_job(
+            pnl_service.recalc_all, "cron", hour=3, minute=0, id="daily_pnl_recalc"
+        )
+        # P3：每日 09:00 扫描未来 7 天到期未付发票，推送站内通知
+        from app.services import notifications as notif_service
+
+        sched.add_job(
+            notif_service.scan_invoice_due,
+            "cron",
+            hour=9,
+            minute=0,
+            id="daily_invoice_due_scan",
+        )
         sched.start()
         logging.getLogger("uvicorn.error").info(
-            "调度器已启动：每日 %02d:%02d 扫描待办推送", hour, minute
+            "调度器已启动：每日 %02d:%02d 扫描待办推送；03:00 重算项目损益", hour, minute
         )
         atexit.register(lambda: sched.shutdown(wait=False))
     except Exception as exc:  # noqa: BLE001

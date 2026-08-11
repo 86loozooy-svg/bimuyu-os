@@ -9,12 +9,74 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/style.css">
-  <link rel="stylesheet" href="/static/css/halo.css">
+  <link rel="stylesheet" href="/static/css/halo.css?v=19">
+  <link rel="stylesheet" href="/static/css/cockpit.css?v=1">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
-  <script src="https://unpkg.com/lucide@latest" defer></script>
+  <script src="/static/js/lucide.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
   {% block extra_css %}{% endblock %}
+
+  <script>
+  (function () {
+    var KEY = 'vsence-theme';
+    var KEY_AUTO = 'vsence-theme-auto';
+    function stored() { try { return localStorage.getItem(KEY); } catch (e) { return null; } }
+    function autoStored() { try { return localStorage.getItem(KEY_AUTO); } catch (e) { return null; } }
+    function isAutoOn() { return autoStored() !== 'off'; }
+    function resolve() {
+      var m = stored();
+      if (m === 'dark') return 'dark';
+      if (m === 'light') return 'light';
+      if (isAutoOn()) return (new Date().getHours() >= 18) ? 'dark' : 'light';
+      return 'light';
+    }
+    // 暗色 = 无 data-theme 属性（回到 :root 默认），亮色才显式打标，
+    // 这样公开站 style.css 里休眠的 [data-theme="dark"] 规则绝不会命中后台页
+    function apply(t, persist) {
+      if (t === 'dark') document.documentElement.removeAttribute('data-theme');
+      else document.documentElement.setAttribute('data-theme', 'light');
+      if (persist) { try { localStorage.setItem(KEY, t); } catch (e) {} }
+      if (window.__syncThemeToggle) window.__syncThemeToggle();
+    }
+    window.toggleTheme = function () {
+      var cur = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+      var next = cur === 'dark' ? 'light' : 'dark';
+      // 手动切换主题 = 视为锁定，关闭自动转换
+      try { localStorage.setItem(KEY_AUTO, 'off'); } catch (e) {}
+      apply(next, true);
+    };
+    window.toggleAuto = function () {
+      if (isAutoOn()) {
+        // 关闭自动：把当前主题固化为手动锁定
+        var cur = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+        try { localStorage.setItem(KEY_AUTO, 'off'); localStorage.setItem(KEY, cur); } catch (e) {}
+        apply(cur, true);
+      } else {
+        // 开启自动：清除手动锁定，按 18:00 规则
+        try { localStorage.removeItem(KEY); localStorage.setItem(KEY_AUTO, 'on'); } catch (e) {}
+        apply(resolve(), false);
+      }
+    };
+    // 首屏即时定主题，避免闪烁
+    apply(resolve(), false);
+    // auto 模式：跨过 18:00 时自动切换（仅在未手动锁定且自动开启时）
+    setInterval(function () {
+      if (stored() || !isAutoOn()) return;
+      var want = (new Date().getHours() >= 18) ? 'dark' : 'light';
+      var cur = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+      if (want !== cur) apply(want, false);
+    }, 60000);
+  })();
+  </script>
 </head>
 <body>
+  <script>
+    window.userMeta = {
+      role: "{{ user.role or 'member' }}",
+      level: "{{ user.membership_level or 'standard' }}",
+      onboardingDone: {% if user.onboarding_done %}true{% else %}false{% endif %}
+    };
+  </script>
   <div class="app-layout">
     <aside class="app-sidebar">
       <div class="sidebar-brand">
@@ -22,100 +84,150 @@
         <span>Studio OS</span>
       </div>
 
-      <nav>
+      {% set cur = request.url.path %}
+      {% set t = request.query_params.get('tab', '') %}
+      {% set extend_base = "https://vsence.com/pricing" %}
+
+      {% set _parts = cur.split('/') %}
+      {% set _section = '/' + _parts[1] + ('/' + _parts[2] if _parts|length > 2 and _parts[2] != '' else '') %}
+      {% set _title_map = {
+        '/app': '工作台',
+        '/app/dashboard': '工作台',
+        '/dashboard': '工作台',
+        '/app/pipeline': '线索看板',
+        '/app/projects': '项目列表',
+        '/app/quotes': '报价单',
+        '/app/catalog': '单价目录',
+        '/app/calculator': '造价信息',
+        '/app/library': '材料库',
+        '/app/workers': '工人通讯录',
+        '/app/settings': '设置',
+        '/app/modules': '模块管理',
+        '/app/notifications': '消息中心',
+        '/app/tasks': '待办'
+      } %}
+      {% set section_title = _title_map.get(_section, '工作台') %}
+
+      <nav data-onb="nav">
         <ul class="app-nav">
-          <li class="nav-section">工作台</li>
           <li>
-            <a href="/app/" {% if request.url.path == '/app/' %}class="active"{% endif %}>
-              <i data-lucide="layout-dashboard"></i>
-              Dashboard
+            <a href="/dashboard" class="nav-dash{% if cur == '/dashboard' or cur == '/app/dashboard' or cur == '/app/' %} active{% endif %}">
+              <i data-lucide="home"></i>
+              工作台
               <span class="nav-badge" id="todoBadge" hidden></span>
             </a>
           </li>
-          <li>
-            <a href="/app/pipeline" {% if '/pipeline' in request.url.path %}class="active"{% endif %}>
-              <i data-lucide="kanban-square"></i>
-              线索看板
-            </a>
-          </li>
-          <li>
-            <a href="/app/projects" {% if '/projects' in request.url.path %}class="active"{% endif %}>
-              <i data-lucide="folder-kanban"></i>
-              项目
-            </a>
-          </li>
-          <li>
-            <a href="/app/library" {% if '/library' in request.url.path %}class="active"{% endif %}>
-              <i data-lucide="library"></i>
-              资料库
-            </a>
-          </li>
-          <li>
-            <a href="/app/quotes" {% if '/quotes' in request.url.path %}class="active"{% endif %}>
-              <i data-lucide="file-text"></i>
-              报价中心
-            </a>
-          </li>
-          <li>
-            <a href="/app/catalog" {% if '/catalog' in request.url.path %}class="active"{% endif %}>
-              <i data-lucide="calculator"></i>
-              单价目录
-            </a>
-          </li>
-          <li>
-            <a href="/app/calculator" {% if '/calculator' in request.url.path %}class="active"{% endif %}>
-              <i data-lucide="ruler"></i>
-              工程计算器
-            </a>
-          </li>
+          <li class="nav-divider"></li>
+
+          <li class="nav-section"><span class="nav-section__zh">项目管理</span></li>
+          <li><a href="/app/pipeline" {% if cur == '/app/pipeline' %}class="active"{% endif %}><i data-lucide="kanban-square"></i>线索看板</a></li>
+          <li><a href="/app/projects" {% if cur == '/app/projects' %}class="active"{% endif %}><i data-lucide="folder-kanban"></i>项目列表</a></li>
+          <li><a class="nav-extend" href="{{ extend_base }}?from=projects" target="_blank" rel="noopener">+ 扩展工作台</a></li>
+
+          <li class="nav-section"><span class="nav-section__zh">报价中心</span></li>
+          <li><a href="/app/catalog" {% if cur == '/app/catalog' %}class="active"{% endif %}><i data-lucide="calculator"></i>单价目录</a></li>
+          <li><a href="/app/quotes" {% if cur == '/app/quotes' %}class="active"{% endif %}><i data-lucide="file-text"></i>报价单</a></li>
+          <li><a class="nav-extend" href="{{ extend_base }}?from=quotes" target="_blank" rel="noopener">+ 扩展工作台</a></li>
+
+          <li class="nav-section"><span class="nav-section__zh">资料库</span></li>
+          <li><a href="/app/calculator" {% if cur == '/app/calculator' %}class="active"{% endif %}><i data-lucide="ruler"></i>造价信息</a></li>
+          <li><a href="/app/library" {% if cur == '/app/library' %}class="active"{% endif %}><i data-lucide="library"></i>材料库</a></li>
+          <li><a href="/app/workers" {% if cur == '/app/workers' %}class="active"{% endif %}><i data-lucide="users"></i>工人通讯录</a></li>
+          <li><a class="nav-extend" href="{{ extend_base }}?from=library" target="_blank" rel="noopener">+ 扩展工作台</a></li>
 
           {% if user and user.role == 'admin' %}
-          <li class="nav-section">管理</li>
-          <li>
-            <a href="/app/workers" {% if '/workers' in request.url.path %}class="active"{% endif %}>
-              <i data-lucide="users"></i>
-              工人通讯录
-            </a>
-          </li>
-          <li>
-            <a href="/app/settings" {% if '/settings' in request.url.path %}class="active"{% endif %}>
-              <i data-lucide="settings-2"></i>
-              设置
-            </a>
-          </li>
+          <li class="nav-section"><span class="nav-section__zh">管理</span></li>
+          <li><a href="/app/settings?tab=members" {% if cur == '/app/settings' and t == 'members' %}class="active"{% endif %}><i data-lucide="shield"></i>成员与权限</a></li>
+          <li><a href="/app/settings?tab=public" {% if cur == '/app/settings' and t == 'public' %}class="active"{% endif %}><i data-lucide="globe"></i>公开站管理</a></li>
+          <li><a href="/app/modules" {% if cur == '/app/modules' %}class="active"{% endif %}><i data-lucide="blocks"></i>模块管理</a></li>
+          <li><a class="nav-extend" href="{{ extend_base }}?from=manage" target="_blank" rel="noopener">+ 扩展工作台</a></li>
           {% endif %}
 
-          <li class="nav-section">外部</li>
-          <li>
-            <a href="/" target="_blank">
-              <i data-lucide="globe"></i>
-              查看公开站
-            </a>
+          <li class="nav-section"><span class="nav-section__zh">外部</span></li>
+          <li data-onb="public"><a href="/" target="_blank"><i data-lucide="globe"></i>查看公开站</a></li>
+          <li><a class="nav-extend" href="{{ extend_base }}?from=external" target="_blank" rel="noopener">+ 扩展工作台</a></li>
+
+          {% if user and user.role == 'admin' %}
+          <li class="nav-dropdown {% if cur == '/app/settings' %}open{% endif %}" data-onb="settings">
+            <button type="button" class="nav-dropdown__toggle" aria-haspopup="true" aria-expanded="{% if cur == '/app/settings' %}true{% else %}false{% endif %}" onclick="var d=this.parentElement;d.classList.toggle('open');this.setAttribute('aria-expanded',d.classList.contains('open'))">
+              <span class="nav-dropdown__main"><i data-lucide="settings-2"></i><span class="nav-dropdown__zh">设置</span></span><span class="nav-dropdown__en">Settings</span>
+              <i data-lucide="chevron-down" class="nav-dropdown__chevron"></i>
+            </button>
+            <ul class="nav-dropdown__menu">
+              <li><a href="/app/settings?tab=account" {% if cur == '/app/settings' and t == 'account' %}class="active"{% endif %}><i data-lucide="user"></i>账户</a></li>
+              <li><a href="/app/settings?tab=notification" {% if cur == '/app/settings' and t == 'notification' %}class="active"{% endif %}><i data-lucide="bell"></i>通知</a></li>
+              <li><a href="/app/settings?tab=appearance" {% if cur == '/app/settings' and t == 'appearance' %}class="active"{% endif %}><i data-lucide="palette"></i>外观</a></li>
+              <li><a href="/app/settings?tab=data" {% if cur == '/app/settings' and t == 'data' %}class="active"{% endif %}><i data-lucide="database"></i>数据</a></li>
+              <li><a href="/app/settings?tab=about" {% if cur == '/app/settings' and t == 'about' %}class="active"{% endif %}><i data-lucide="info"></i>关于和服务</a></li>
+            </ul>
           </li>
+          {% endif %}
         </ul>
       </nav>
 
       <div class="sidebar-footer">
-        <div class="sidebar-user">
-          {% if user.avatar_url %}
-          <img class="user-avatar" src="{{ user.avatar_url }}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover">
-          {% else %}
-          <span class="user-avatar" aria-hidden="true">{{ (user.display_name or user.username or user.email)[0:1] | upper }}</span>
-          {% endif %}
-          <div class="user-info">
-            <span class="user-name">{{ user.display_name or user.username or user.email }}</span>
-            <span class="user-role">{{ user.role or 'member' }}</span>
+          <div class="sidebar-user" id="sidebarUser" data-onb="account"
+               onclick="location.href='/app/account'" title="查看账户与权益">
+            {% if user.avatar_url %}
+            <img class="user-avatar" src="{{ user.avatar_url }}" alt="">
+            {% else %}
+            <span class="user-avatar" aria-hidden="true">{{ (user.display_name or user.username or user.email)[0:1] | upper }}</span>
+            {% endif %}
+            <div class="user-info">
+              <span class="user-name">{{ user.display_name or user.username or user.email }}</span>
+              <span class="user-role">{{ (user.role or 'member') | lower }}</span>
+            </div>
           </div>
+
+          <a href="/app/logout" class="sidebar-logout">
+            <i data-lucide="log-out"></i>
+            <span>退出登录</span>
+          </a>
+
+        <div class="theme-switch-row">
+          <span class="theme-switch-label">深色模式</span>
+          <label class="switch switch--small" title="Toggle dark / light theme">
+            <input type="checkbox" class="input" id="themeSwitch" onchange="toggleTheme()">
+            <span class="slider"></span>
+          </label>
         </div>
-        <a href="/app/logout" class="btn btn-tertiary btn-sm" style="width:100%;margin-top:10px">
-          <i data-lucide="log-out"></i>
-          退出登录
-        </a>
+
+        <label class="auto-toggle-row" title="Automatically switch to dark mode after 18:00">
+          <span class="auto-label">Auto switch at 18:00</span>
+          <input type="checkbox" id="autoToggle" onchange="toggleAuto()">
+        </label>
       </div>
     </aside>
 
     <main class="app-main">
-      {% block content %}{% endblock %}
+      <header class="app-topbar" data-onb="top">
+        <div class="topbar-left">
+          <span class="topbar-section">{{ section_title }}</span>
+        </div>
+        <div class="topbar-right">
+          <div class="topbar-bell" id="bellWrap">
+            <button type="button" class="topbar-bell__btn" id="bellBtn"
+                    aria-label="消息中心" aria-haspopup="true" aria-expanded="false">
+              <i data-lucide="bell"></i>
+              <span class="topbar-bell__badge" id="bellBadge" hidden>0</span>
+            </button>
+            <div class="topbar-bell__panel" id="bellPanel" hidden>
+              <div class="topbar-bell__head">
+                <span>通知</span>
+                <a href="/app/notifications">查看全部</a>
+              </div>
+              <div class="topbar-bell__list" id="bellList"></div>
+              <div class="topbar-bell__foot">
+                <a href="/app/notifications">进入消息中心 →</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="content">
+        {% block content %}{% endblock %}
+      </div>
     </main>
   </div>
 
@@ -144,6 +256,19 @@
     document.addEventListener('DOMContentLoaded', function() {
       if (window.lucide && lucide.createIcons) lucide.createIcons();
 
+      // 同步主题切换：switch 复选框状态（checked = 暗色）；auto checkbox 同步
+      window.__syncThemeToggle = function () {
+        var sw = document.getElementById('themeSwitch');
+        if (sw) sw.checked = (document.documentElement.getAttribute('data-theme') !== 'light');
+        var autoBox = document.getElementById('autoToggle');
+        if (autoBox) {
+          autoBox.checked = (function () {
+            try { return localStorage.getItem('vsence-theme-auto'); } catch (e) { return null; }
+          })() !== 'off';
+        }
+      };
+      window.__syncThemeToggle();
+
       // 站内红点：到期未完成任务数（未配置外部推送时的主要提醒入口）
       if (!window.location.pathname.startsWith('/app/login')) {
         fetch('/app/tasks/count')
@@ -161,7 +286,357 @@
           })
           .catch(function () {});
       }
+
+      // 消息中心：铃铛未读数 + 下拉最近通知
+      (function () {
+        var badge = document.getElementById('bellBadge');
+        var panel = document.getElementById('bellPanel');
+        var btn = document.getElementById('bellBtn');
+        var list = document.getElementById('bellList');
+        var wrap = document.getElementById('bellWrap');
+        if (!badge || !btn) return;
+
+        function esc(s) {
+          return (s == null ? '' : String(s)).replace(/[&<>"]/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+          });
+        }
+        function fmtTime(s) { return (s || '').slice(0, 16); }
+        function renderBadge(n) {
+          if (n > 0) { badge.textContent = n > 99 ? '99+' : n; badge.hidden = false; }
+          else { badge.hidden = true; }
+        }
+        var ICONS = {
+          quote_approved: 'circle-check', stage_change: 'git-pull-request',
+          invoice_due: 'alert-circle', license_expiring: 'key',
+          announcement: 'megaphone'
+        };
+
+        function openPanel() {
+          panel.hidden = false;
+          btn.setAttribute('aria-expanded', 'true');
+          fetch('/app/notifications/recent')
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (d) {
+              if (!d) return;
+              if (!d.items.length) {
+                list.innerHTML = '<div class="topbar-bell__empty">暂无通知</div>';
+              } else {
+                list.innerHTML = d.items.map(function (it) {
+                  var ic = ICONS[it.type] || 'bell';
+                  return '<a class="topbar-bell__item' + (it.is_read ? ' is-read' : '') +
+                    '" href="' + (it.link || '/app/notifications') + '">' +
+                    '<span class="topbar-bell__item-icon notif-icon--' + it.type + '">' +
+                    '<i data-lucide="' + ic + '"></i></span>' +
+                    '<span class="topbar-bell__item-main">' +
+                    '<span class="topbar-bell__item-title">' + esc(it.title) + '</span>' +
+                    '<span class="topbar-bell__item-time">' + fmtTime(it.created_at) + '</span>' +
+                    '</span>' + (it.is_read ? '' : '<span class="topbar-bell__item-dot"></span>') +
+                    '</a>';
+                }).join('');
+                if (window.lucide && lucide.createIcons) lucide.createIcons();
+              }
+            })
+            .catch(function () {});
+        }
+        function closePanel() {
+          panel.hidden = true;
+          btn.setAttribute('aria-expanded', 'false');
+        }
+
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          if (panel.hidden) openPanel(); else closePanel();
+        });
+        document.addEventListener('click', function (e) {
+          if (!panel.hidden && wrap && !wrap.contains(e.target)) closePanel();
+        });
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') closePanel();
+        });
+
+        // 初始未读数（非登录页）
+        if (!window.location.pathname.startsWith('/app/login')) {
+          fetch('/app/notifications/unread-count')
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (d) { if (d) renderBadge(d.count); })
+            .catch(function () {});
+        }
+      })();
     });
+  </script>
+  <!-- ===== 全局分享查看弹窗 ===== -->
+  <div id="shareModalRoot"></div>
+
+  <!-- ===== 新手引导 Spotlight 容器 ===== -->
+  <div id="onbRoot"></div>
+
+  <script>
+  /* =====================================================================
+     全局分享查看：openShareModal(targetType, targetId, title)
+     生成只读令牌、二维码、短链，并列出我的分享（可吊销）。
+     ===================================================================== */
+  window.openShareModal = function (targetType, targetId, title) {
+    var root = document.getElementById('shareModalRoot');
+    root.innerHTML = '';
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML =
+      '<div class="modal" role="dialog" aria-modal="true">' +
+        '<div class="modal__header"><span class="modal__title">分享查看 · 只读</span>' +
+        '<button class="modal__close" aria-label="关闭">&times;</button></div>' +
+        '<div class="modal__body" id="shareBody"></div>' +
+      '</div>';
+    root.appendChild(overlay);
+
+    var body = overlay.querySelector('#shareBody');
+    body.innerHTML =
+      '<div class="share-qr" id="shareQr"></div>' +
+      '<div class="share-url-row"><input id="shareUrl" readonly><button class="btn btn-primary btn-sm" id="copyUrl">复制</button></div>' +
+      '<div class="share-perms">' +
+        '<div class="share-perms__group"><label>有效期</label>' +
+          '<select id="shareExp" class="form-control" style="width:100%;padding:9px 12px;background:var(--color-background);color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:var(--radius-sm)">' +
+            '<option value="never">永久有效</option>' +
+            '<option value="1h">1 小时</option>' +
+            '<option value="24h">24 小时</option>' +
+            '<option value="7d" selected>7 天</option>' +
+            '<option value="30d">30 天</option>' +
+          '</select></div>' +
+        '<div class="share-perms__group"><label>访问方式</label>' +
+          '<div class="share-perms__opts" id="shareMode">' +
+            '<div class="opt active" data-mode="link">链接直访<small>任何人持链接可读</small></div>' +
+            '<div class="opt" data-mode="password">密码访问<small>需输入密码</small></div>' +
+          '</div></div>' +
+        '<div class="share-perms__group" id="pwGroup" style="display:none"><label>访问密码</label>' +
+          '<input id="sharePw" type="text" placeholder="至少 4 位" style="width:100%;padding:9px 12px;background:var(--color-background);color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:var(--radius-sm)"></div>' +
+      '</div>' +
+      '<div class="modal__footer"><button class="btn btn-outline" id="shareCancel">取消</button>' +
+        '<button class="btn btn-primary" id="shareCreate">生成分享</button></div>';
+
+    var mode = 'link';
+    overlay.querySelectorAll('#shareMode .opt').forEach(function (o) {
+      o.addEventListener('click', function () {
+        overlay.querySelectorAll('#shareMode .opt').forEach(function (x) { x.classList.remove('active'); });
+        o.classList.add('active');
+        mode = o.getAttribute('data-mode');
+        document.getElementById('pwGroup').style.display = (mode === 'password') ? 'block' : 'none';
+      });
+    });
+
+    function close() { root.innerHTML = ''; }
+    overlay.querySelector('.modal__close').addEventListener('click', close);
+    overlay.querySelector('#shareCancel').addEventListener('click', close);
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+
+    overlay.querySelector('#shareCreate').addEventListener('click', function () {
+      var fd = new FormData();
+      fd.append('target_type', targetType);
+      fd.append('target_id', targetId);
+      fd.append('title', title || '');
+      fd.append('access_mode', mode);
+      fd.append('password', document.getElementById('sharePw').value);
+      fd.append('expires_in', document.getElementById('shareExp').value);
+      fetch('/app/share/create', { method: 'POST', body: fd })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (!d.ok) { alert(d.detail || '生成失败'); return; }
+          renderResult(d);
+        })
+        .catch(function () { alert('网络错误'); });
+    });
+
+    function renderResult(d) {
+      var qr = document.getElementById('shareQr');
+      qr.innerHTML = '';
+      if (window.QRCode) {
+        new QRCode(qr, { text: d.short_url, width: 148, height: 148, colorDark: '#000', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.M });
+      } else {
+        qr.innerHTML = '<div style="font-size:11px;text-align:center;color:#666">二维码库未加载</div>';
+      }
+      document.getElementById('shareUrl').value = d.short_url;
+      document.getElementById('copyUrl').onclick = function () {
+        navigator.clipboard.writeText(d.short_url).then(function () {
+          document.getElementById('copyUrl').textContent = '已复制';
+          setTimeout(function () { document.getElementById('copyUrl').textContent = '复制'; }, 1500);
+        });
+      };
+      // 切换为结果视图：隐藏权限配置、改按钮为管理
+      var perms = body.querySelector('.share-perms');
+      if (perms) perms.style.display = 'none';
+      var footer = body.parentElement.querySelector('.modal__footer');
+      footer.innerHTML = '<button class="btn btn-outline" id="shareManage">管理我的分享</button>' +
+        '<button class="btn btn-primary" id="shareDone">完成</button>';
+      footer.querySelector('#shareDone').onclick = close;
+      footer.querySelector('#shareManage').onclick = loadMyShares;
+    }
+
+    function loadMyShares() {
+      fetch('/app/share/list').then(function (r) { return r.json(); }).then(function (d) {
+        var items = (d.items || []).map(function (s) {
+          var meta = (s.access_mode === 'password' ? '密码访问 · ' : '链接访问 · ') +
+            (s.revoked ? '已吊销' : (s.expired ? '已过期' : (s.expires_at ? '有效期至 ' + s.expires_at.slice(0, 10) : '永久'))) +
+            ' · 访问 ' + s.access_count + ' 次';
+          return '<div class="share-item' + (s.revoked ? ' is-revoked' : '') + '">' +
+            '<div class="share-item__main"><div class="share-item__title">' + (s.title || s.token) + '</div>' +
+            '<div class="share-item__meta">' + meta + '</div></div>' +
+            (s.revoked ? '' : '<button class="btn btn-sm btn-outline" data-rev="' + s.token + '">吊销</button>') +
+            '</div>';
+        }).join('') || '<div style="color:var(--color-text-muted);font-size:.85rem">暂无分享</div>';
+        var perms = body.querySelector('.share-perms');
+        if (perms) perms.style.display = 'none';
+        var qr = document.getElementById('shareQr'); if (qr) qr.style.display = 'none';
+        var urlRow = body.querySelector('.share-url-row'); if (urlRow) urlRow.style.display = 'none';
+        var panel = document.createElement('div');
+        panel.innerHTML = '<h4 style="margin:0 0 12px">我的分享</h4><div class="share-list">' + items + '</div>';
+        body.appendChild(panel);
+        panel.querySelectorAll('[data-rev]').forEach(function (b) {
+          b.addEventListener('click', function () {
+            fetch('/app/share/' + b.getAttribute('data-rev') + '/revoke', { method: 'POST' })
+              .then(function () { loadMyShares(); });
+          });
+        });
+      });
+    }
+  };
+
+  /* =====================================================================
+     新手引导 Spotlight：5 步，支持 Skip / 不再显示 / 角色差异化 / 设置页召回
+     ===================================================================== */
+  (function () {
+    function esc(s) { return (s == null ? '' : String(s)).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+    function buildSteps(role) {
+      var isAdmin = role === 'admin';
+      var steps = [
+        {
+          sel: '[data-onb="nav"]',
+          step: '第 1 / 5 步',
+          title: '认识你的工作台',
+          text: '左侧是按「项目管理 / 报价中心 / 资料库 / 管理 / 外部」分组的导航，点任意模块即可进入对应功能。',
+          roles: ['all']
+        },
+        {
+          sel: '[data-onb="top"]',
+          step: '第 2 / 5 步',
+          title: '顶部始终显示当前位置',
+          text: '顶部标题会跟随你所在的模块切换，右侧是消息中心，未读通知会在这里高亮提示。',
+          roles: ['all']
+        },
+        {
+          sel: '[data-onb="account"]',
+          step: '第 3 / 5 步',
+          title: '你的账户与权益',
+          text: '点击左下角你的头像卡片，可查看权益等级、修改资料与密码。权益等级不同，配色也不同。',
+          roles: ['all']
+        },
+        {
+          sel: '[data-onb="public"]',
+          step: '第 4 / 5 步',
+          title: '分享协作',
+          text: '在项目列表点「分享」即可生成只读链接与二维码，支持有效期与密码访问，且随时可吊销——对方只能看、不能改。',
+          roles: ['all']
+        },
+        {
+          sel: '[data-onb="settings"]',
+          step: '第 5 / 5 步',
+          title: '设置与召回',
+          text: isAdmin
+            ? '设置页可调整外观、管理成员与公开站；若日后想重看本引导，来这里点「重新观看新手引导」即可。'
+            : '设置页可调整外观与账户；若日后想重看本引导，来这里点「重新观看新手引导」即可。',
+          roles: ['all']
+        }
+      ];
+      return steps.filter(function (s) { return s.roles.indexOf('all') >= 0 || s.roles.indexOf(role) >= 0; });
+    }
+
+    function dismiss() {
+      fetch('/app/onboarding/dismiss', { method: 'POST' }).catch(function () {});
+      try { localStorage.setItem('onb_skip', '1'); } catch (e) {}
+    }
+
+    function place(spot, card, target) {
+      var r = target.getBoundingClientRect();
+      var pad = 8;
+      spot.style.left = (r.left - pad) + 'px';
+      spot.style.top = (r.top - pad) + 'px';
+      spot.style.width = (r.width + pad * 2) + 'px';
+      spot.style.height = (r.height + pad * 2) + 'px';
+      // 卡片贴边：目标在上方则卡片置下，反之置上；水平居中于目标
+      var cw = Math.min(340, window.innerWidth - 32);
+      var ch = card.offsetHeight || 220;
+      var top = r.bottom + 14;
+      if (top + ch > window.innerHeight - 12) top = Math.max(12, r.top - ch - 14);
+      if (top < 12) top = 12;
+      var left = r.left + r.width / 2 - cw / 2;
+      left = Math.max(12, Math.min(left, window.innerWidth - cw - 12));
+      card.style.left = left + 'px';
+      card.style.top = top + 'px';
+    }
+
+    window.startOnboarding = function () {
+      var role = (window.userMeta && window.userMeta.role) || 'member';
+      var steps = buildSteps(role);
+      if (!steps.length) return;
+      var root = document.getElementById('onbRoot');
+      root.innerHTML = '';
+      var overlay = document.createElement('div');
+      overlay.className = 'onb-overlay';
+      var spot = document.createElement('div'); spot.className = 'onb-spot';
+      var card = document.createElement('div'); card.className = 'onb-card';
+      overlay.appendChild(spot); overlay.appendChild(card);
+      root.appendChild(overlay);
+
+      var i = 0;
+      function render() {
+        var s = steps[i];
+        card.innerHTML =
+          '<div class="onb-card__step">' + esc(s.step) + '</div>' +
+          '<div class="onb-card__title">' + esc(s.title) + '</div>' +
+          '<div class="onb-card__text">' + esc(s.text) + '</div>' +
+          '<div class="onb-card__dots">' + steps.map(function (_, k) {
+            return '<span class="onb-card__dot' + (k === i ? ' active' : '') + '"></span>';
+          }).join('') + '</div>' +
+          '<div class="onb-card__actions">' +
+            '<div class="onb-card__skip"><label><input type="checkbox" id="onbNoMore"> 不再显示</label></div>' +
+            '<div class="onb-card__btns">' +
+              '<button class="btn btn-outline btn-sm" id="onbSkip">跳过</button>' +
+              '<button class="btn btn-primary btn-sm" id="onbNext">' + (i === steps.length - 1 ? '完成' : '下一步') + '</button>' +
+            '</div>' +
+          '</div>';
+
+        var target = s.sel ? document.querySelector(s.sel) : null;
+        if (target) { spot.style.display = 'block'; place(spot, card, target); }
+        else { spot.style.display = 'none'; card.style.left = '50%'; card.style.top = '50%'; card.style.transform = 'translate(-50%,-50%)'; }
+
+        card.querySelector('#onbSkip').onclick = function () {
+          if (card.querySelector('#onbNoMore').checked) dismiss();
+          else dismiss();
+          root.innerHTML = '';
+        };
+        card.querySelector('#onbNext').onclick = function () {
+          if (card.querySelector('#onbNoMore').checked) dismiss();
+          if (i === steps.length - 1) { dismiss(); root.innerHTML = ''; }
+          else { i++; render(); }
+        };
+      }
+      render();
+
+      window.addEventListener('resize', function () {
+        var s = steps[i]; var t = s.sel ? document.querySelector(s.sel) : null;
+        if (t) place(spot, card, t);
+      });
+    };
+
+    // 首次自动弹：后端 onboarding_done=false 且本地未跳过
+    document.addEventListener('DOMContentLoaded', function () {
+      var done = window.userMeta && window.userMeta.onboardingDone;
+      var skipped = false;
+      try { skipped = localStorage.getItem('onb_skip') === '1'; } catch (e) {}
+      if (!done && !skipped) {
+        setTimeout(function () { window.startOnboarding(); }, 600);
+      }
+    });
+  })();
   </script>
 </body>
 </html>

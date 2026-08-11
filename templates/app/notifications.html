@@ -1,0 +1,67 @@
+{% extends "app/base.html" %}
+{% block title %}消息中心 — vsence问世{% endblock %}
+{% block content %}
+<section class="page">
+  <header class="page-head">
+    <div>
+      <h1 class="page-title">消息中心</h1>
+      <p class="page-sub">
+        {% if unread %}你有 <b style="color:var(--color-primary)">{{ unread }}</b> 条未读通知{% else %}全部已读，没有待处理通知{% endif %}
+      </p>
+    </div>
+    <form method="post" action="/app/notifications/read-all">
+      <button type="submit" class="btn">全部标为已读</button>
+    </form>
+  </header>
+
+  {# 类型过滤 #}
+  <div class="notif-filters">
+    <a class="notif-filter {% if not type_filter %}active{% endif %}" href="/app/notifications">全部</a>
+    {% for key, label in type_labels.items() %}
+    <a class="notif-filter {% if type_filter == key %}active{% endif %}" href="/app/notifications?type={{ key }}">{{ label }}</a>
+    {% endfor %}
+  </div>
+
+  {# 通知列表 #}
+  <div class="notif-list">
+    {% for it in items %}
+    <div class="notif-item {% if not it.is_read %}notif-item--unread{% endif %}">
+      <span class="notif-icon notif-icon--{{ it.type }}" aria-hidden="true">
+        <i data-lucide="        {
+          'quote_approved': 'circle-check',
+          'stage_change': 'git-pull-request',
+          'invoice_due': 'alert-circle',
+          'license_expiring': 'key',
+          'announcement': 'megaphone'
+        }.get(it.type, 'bell') }}"></i>
+      </span>
+
+      <div class="notif-body">
+        <div class="notif-title-row">
+          <span class="notif-title">{{ it.title }}</span>
+          {% if not it.is_read %}<span class="notif-dot" title="未读"></span>{% endif %}
+        </div>
+        {% if it.body %}<p class="notif-text">{{ it.body }}</p>{% endif %}
+        <div class="notif-meta">
+          <span class="notif-type">{{ type_labels.get(it.type, it.type) }}</span>
+          <span class="notif-time">{{ it.created_at }}</span>
+          {% if it.link %}<a class="notif-link" href="{{ it.link }}">查看详情 →</a>{% endif %}
+        </div>
+      </div>
+
+      {% if not it.is_read %}
+      <form class="notif-read-form" method="post" action="/app/notifications/{{ it.id }}/read">
+        <button type="submit" class="notif-read-btn" title="标记为已读">标记已读</button>
+      </form>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="notif-empty">
+      <i data-lucide="bell-off"></i>
+      <p>暂时没有通知</p>
+      <span>项目阶段流转、发票到期、系统公告都会出现在这里。</span>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

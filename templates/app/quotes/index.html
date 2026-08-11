@@ -1,24 +1,65 @@
 {% extends "app/base.html" %}
-{% block title %}报价中心 — vsence问世{% endblock %}
+{% block title %}报价单 — vsence问世{% endblock %}
 {% block content %}
-<div class="app-header"><h1>报价中心</h1></div>
-<div class="card">
-  <table>
+
+{% macro stag(s) %}
+  {% set label = {'draft':'待确认','pending':'待确认','submitted':'待提交','confirmed':'已确认','approved':'已确认','void':'已作废','cancelled':'已作废'}.get(s, s) %}
+  {% if s in ['draft','pending','submitted'] %}
+    <span class="tag tag-accent">{{ label }}</span>
+  {% elif s in ['confirmed','approved'] %}
+    <span class="tag tag-muted">{{ label }}</span>
+  {% elif s in ['void','cancelled'] %}
+    <span class="tag tag-risk">{{ label }}</span>
+  {% else %}
+    <span class="tag tag-muted">{{ label }}</span>
+  {% endif %}
+{% endmacro %}
+
+<div class="page-header">
+  <div>
+    <div class="page-title">报价单</div>
+    <div class="page-sub">本月 {{ quote_stats.total }} 份报价 · 总额 ¥{{ '{:,.0f}'.format(quote_stats.amount) if quote_stats.amount else '0' }}</div>
+  </div>
+  <a class="btn-accent" href="/app/projects"><i data-lucide="plus"></i> 新建报价单</a>
+</div>
+
+<div class="grid-3">
+  <div class="card panel"><h3>待确认</h3><div class="metric-value">{{ quote_stats.pending }}</div><div class="metric-label">份</div></div>
+  <div class="card panel"><h3>已确认</h3><div class="metric-value">{{ quote_stats.confirmed }}</div><div class="metric-label">份</div></div>
+  <div class="card panel"><h3>已作废</h3><div class="metric-value">{{ quote_stats.void }}</div><div class="metric-label">份</div></div>
+</div>
+
+{# ── 批量导入入口（保留的实用功能） ── #}
+<div class="import-region">
+  <span class="import-icon"><i data-lucide="file-spreadsheet"></i></span>
+  <div class="import-body">
+    <div class="import-title">批量导入报价</div>
+    <div class="import-steps">下载模板 → 工头填写 → 上传自动生成报价单</div>
+  </div>
+  <div class="import-actions">
+    <a href="#" class="btn btn-sm btn-outline">下载模板</a>
+    <button type="button" class="btn btn-sm btn-primary" onclick="alert('上传功能即将上线')">上传 Excel</button>
+  </div>
+</div>
+
+<div class="card panel">
+  <h3>报价单列表</h3>
+  <table class="table">
     <thead>
       <tr><th>项目</th><th>版本</th><th>模板</th><th>总计</th><th>状态</th><th>创建时间</th></tr>
     </thead>
     <tbody>
       {% for q in quotes %}
       <tr>
-        <td><a href="/app/projects/{{ q.project_id }}?tab=quote&quote_id={{ q.id }}">{{ q.project_name }}</a></td>
+        <td><a href="/app/projects/{{ q.project_id }}?tab=quote&quote_id={{ q.id }}" style="color:var(--text-primary);text-decoration:none">{{ q.project_name }}</a></td>
         <td>v{{ q.version }}</td>
         <td>{{ q.template_name or '—' }}</td>
         <td>{% if q.total is not none %}¥{{ '{:,.2f}'.format(q.total) }}{% else %}—{% endif %}</td>
-        <td><span class="badge">{{ q.status }}</span></td>
+        <td>{{ stag(q.status) }}</td>
         <td>{{ q.created_at[:10] if q.created_at else '' }}</td>
       </tr>
       {% else %}
-      <tr><td colspan="6" style="color:var(--muted)">暂无报价</td></tr>
+      <tr><td colspan="6" style="color:var(--text-muted)">暂无报价</td></tr>
       {% endfor %}
     </tbody>
   </table>

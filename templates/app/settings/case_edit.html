@@ -107,11 +107,11 @@
 </div>
 
 <!-- 删除案例 -->
-<div class="card" style="border:1px solid #e74c3c">
-  <h3 style="margin-bottom:8px;color:#c0392b">危险操作</h3>
+<div class="card" style="border:1px solid var(--color-error)">
+  <h3 style="margin-bottom:8px;color:var(--color-error)">危险操作</h3>
   <p style="font-size:.85rem;color:var(--muted);margin-bottom:12px">删除案例将同时删除所有关联图片，不可恢复。</p>
   <form method="post" action="/app/settings/cases/{{ case.id }}/delete" onsubmit="return confirm('确认删除案例「{{ case.title }}」？此操作不可恢复！')">
-    <button type="submit" style="background:#e74c3c;color:#fff;border:none;padding:8px 20px;border-radius:8px;cursor:pointer;font-size:.85rem">删除此案例</button>
+    <button type="submit" class="btn btn-danger">删除此案例</button>
   </form>
 </div>
 

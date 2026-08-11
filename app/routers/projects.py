@@ -1,8 +1,11 @@
 import json
-from datetime import date
+from datetime import date, timedelta
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+
+from app.services import pnl as pnl_service
+from app.services.finance_pdf import build_finance_pdf
 from fastapi.templating import Jinja2Templates
 
 from app.auth import get_accessible_project_ids, get_current_user, log_audit, require_admin, user_can_access_project
@@ -127,30 +130,51 @@ def _build_timeline(project: dict, milestones: list) -> dict | None:
 
 
 @router.get("", response_class=HTMLResponse)
-async def project_list(request: Request, user: dict = Depends(get_current_user)):
+async def project_list(
+    request: Request,
+    user: dict = Depends(get_current_user),
+    status: str = None,
+    phase: str = None,
+    due: str = None,
+):
+    """项目列表，支持 ?status=<阶段> / ?phase=active(进行中) / ?due=week 筛选（驾驶舱指标卡联动）。"""
     project_ids = get_accessible_project_ids(user)
+    today = date.today()
+    week_end = today + timedelta(days=7)
+    conds, params = [], []
+    if status:
+        conds.append("p.status = ?")
+        params.append(status)
+    if phase == "active":
+        conds.append("p.status NOT IN ('done', 'lead')")
+    if due == "week":
+        conds.append("p.deadline BETWEEN ? AND ? AND p.status != 'done'")
+        params.extend([today.isoformat(), week_end.isoformat()])
+    where = (" WHERE " + " AND ".join(conds)) if conds else ""
     with db_session() as conn:
         if project_ids is None:
-            projects = rows_to_list(
-                conn.execute(
-                    """
-                    SELECT p.*, c.name as client_name FROM projects p
-                    LEFT JOIN clients c ON p.client_id = c.id
-                    ORDER BY p.updated_at DESC
-                    """
-                ).fetchall()
-            )
-        elif project_ids:
-            placeholders = ",".join("?" * len(project_ids))
             projects = rows_to_list(
                 conn.execute(
                     f"""
                     SELECT p.*, c.name as client_name FROM projects p
                     LEFT JOIN clients c ON p.client_id = c.id
-                    WHERE p.id IN ({placeholders})
+                    {where}
                     ORDER BY p.updated_at DESC
                     """,
-                    project_ids,
+                    params,
+                ).fetchall()
+            )
+        elif project_ids:
+            ph = ",".join("?" * len(project_ids))
+            projects = rows_to_list(
+                conn.execute(
+                    f"""
+                    SELECT p.*, c.name as client_name FROM projects p
+                    LEFT JOIN clients c ON p.client_id = c.id
+                    WHERE p.id IN ({ph}) {("AND " + " AND ".join(conds)) if conds else ""}
+                    ORDER BY p.updated_at DESC
+                    """,
+                    list(project_ids) + params,
                 ).fetchall()
             )
         else:
@@ -165,6 +189,7 @@ async def project_list(request: Request, user: dict = Depends(get_current_user))
             "projects": projects,
             "clients": clients,
             "status_labels": STATUS_LABELS,
+            "active_filter": {"status": status, "phase": phase, "due": due},
         },
     )
 
@@ -189,6 +214,9 @@ async def project_create(
             (code, name, client_id or None, industry, area or None, status),
         )
         project_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    # P0：新建项目即重算损益派生字段（此时材料/报价为空，结果为 0/NULL）
+    from app.services import pnl
+    pnl.recalc_project(project_id)
     log_audit(user["id"], "create", "project", project_id, name)
     return RedirectResponse(url=f"/app/projects/{project_id}?tab=brief", status_code=303)
 
@@ -223,6 +251,11 @@ async def project_edit(
     fields["updated_at"] = "CURRENT_TIMESTAMP"
 
     with db_session() as conn:
+        old_row = conn.execute(
+            "SELECT status, code FROM projects WHERE id=?", (project_id,)
+        ).fetchone()
+        old_status = old_row[0] if old_row else ""
+        old_code = old_row[1] if old_row else str(project_id)
         sets = []
         vals = []
         for k, v in fields.items():
@@ -234,10 +267,39 @@ async def project_edit(
         if sets:
             vals.append(project_id)
             conn.execute(f"UPDATE projects SET {', '.join(sets)} WHERE id = ?", vals)
+        # P3：阶段（status）流转时推送站内通知
+        new_status = fields.get("status", old_status)
+        if new_status and new_status != old_status:
+            from app.services import notifications as notif
+
+            notif.notify_stage_change(project_id, old_code, old_status, new_status)
+    # P0：项目信息（含 status）变更后重算损益派生字段
+    from app.services import pnl
+    pnl.recalc_project(project_id)
     log_audit(user["id"], "update", "project", project_id)
     # redirect back to referring page
     redirect_url = form.get("redirect", f"/app/projects/{project_id}")
     return RedirectResponse(url=redirect_url, status_code=303)
+
+
+# ── P0：损益派生字段重算端点（字段不允许客户端直写，统一由此重算落库）──────────
+@router.post("/{project_id}/recalc")
+async def project_recalc(project_id: int, user: dict = Depends(get_current_user)):
+    """手动触发单项目损益重算（落库）。供前端/运维回填使用。"""
+    if not user_can_access_project(user, project_id):
+        raise HTTPException(status_code=403)
+    from app.services import pnl
+
+    return JSONResponse(pnl.recalc_project(project_id))
+
+
+@router.post("/recalc-all")
+async def project_recalc_all(user: dict = Depends(get_current_user)):
+    """重算全部项目损益。仅管理员。"""
+    require_admin(user)
+    from app.services import pnl
+
+    return JSONResponse({"ok": True, "recalced": pnl.recalc_all()})
 
 
 @router.post("/{project_id}/milestones/add")
@@ -412,6 +474,97 @@ async def delete_assignment(
     return RedirectResponse(url=f"/app/projects/{project_id}?tab=team", status_code=303)
 
 
+# ── P2 离线模板闭环（置于 /{project_id} 通配路由之前，避免被其吞掉）──────────
+@router.get("/template.xlsx")
+async def project_template_xlsx(user: dict = Depends(get_current_user)):
+    """下载项目批量导入模板（openpyxl 生成，离线可用，含工种下拉/金额公式/条件格式）。"""
+    from app.services.import_projects import build_template_bytes
+
+    data = build_template_bytes(get_studio_defaults())
+    return Response(
+        content=data,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="project_import_template.xlsx"'},
+    )
+
+
+@router.get("/import")
+async def project_import_page(request: Request, user: dict = Depends(get_current_user)):
+    """批量导入项目页面：上传 → 预览（异常行高亮）→ 确认。"""
+    return templates.TemplateResponse(
+        "app/projects/import.html", {"request": request, "user": user}
+    )
+
+
+@router.post("/import-preview")
+async def project_import_preview(
+    file: UploadFile = File(...), user: dict = Depends(get_current_user)
+):
+    """解析上传的 xlsx，返回 {rows, summary}，异常行带 errors 标记。"""
+    from app.services.import_projects import parse_template_bytes
+
+    content = await file.read()
+    if not content:
+        return JSONResponse({"ok": False, "error": "空文件"}, status_code=400)
+    if not (file.filename or "").endswith((".xlsx", ".xlsm")):
+        return JSONResponse({"ok": False, "error": "仅支持 .xlsx 模板文件"}, status_code=400)
+    try:
+        result = parse_template_bytes(content)
+    except Exception as exc:  # noqa: BLE001
+        return JSONResponse({"ok": False, "error": f"解析失败：{exc}"}, status_code=400)
+    return JSONResponse({"ok": True, **result})
+
+
+@router.post("/import-confirm")
+async def project_import_confirm(request: Request, user: dict = Depends(get_current_user)):
+    """按预览结果批量建项目（及首条材料行），触发 P0 损益重算。"""
+    from app.services import pnl as _pnl
+
+    body = await request.json()
+    rows = body.get("rows", [])
+    created = []
+    with db_session() as conn:
+        for row in rows:
+            if not row.get("ok"):
+                continue
+            client_id = None
+            client_name = (row.get("client") or "").strip()
+            if client_name:
+                cid = conn.execute(
+                    "SELECT id FROM clients WHERE name=?", (client_name,)
+                ).fetchone()
+                client_id = cid[0] if cid else None
+            count = conn.execute("SELECT COUNT(*) FROM projects").fetchone()[0]
+            code = f"p-{date.today().year}-{count + 1:03d}"
+            conn.execute(
+                "INSERT INTO projects (code, name, client_id, industry, area, status) "
+                "VALUES (?,?,?,?,?,?)",
+                (
+                    code,
+                    row["name"],
+                    client_id,
+                    row.get("industry") or "",
+                    row.get("area"),
+                    row.get("status", "lead"),
+                ),
+            )
+            pid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+            qty = row.get("qty")
+            price = row.get("price")
+            labor = (row.get("labor") or "").strip()
+            if qty and price and labor:
+                conn.execute(
+                    "INSERT INTO project_material (project_id, name, quantity, unit_price, status, category) "
+                    "VALUES (?,?,?,?,?,?)",
+                    (pid, labor, qty, price, "pending", "导入"),
+                )
+            created.append(pid)
+    for pid in created:
+        _pnl.recalc_project(pid)
+    log_audit(user["id"], "import", "project", len(created), f"批量导入 {len(created)} 个项目")
+    return JSONResponse({"ok": True, "created": len(created), "project_ids": created})
+
+
 @router.get("/{project_id}", response_class=HTMLResponse)
 async def project_detail(
     request: Request,
@@ -478,6 +631,11 @@ async def project_detail(
     timeline = _build_timeline(project, milestones)
 
     show_finance = user["role"] == "admin"
+    finance_pnl = None
+    milestone_curve = []
+    if show_finance:
+        finance_pnl = pnl_service.get_pnl(project_id)
+        milestone_curve = pnl_service.get_milestone_curve(project_id)
     if user["role"] == "viewer":
         for q in quotes:
             q["total"] = None
@@ -513,6 +671,8 @@ async def project_detail(
             "defaults": defaults,
             "status_labels": STATUS_LABELS,
             "show_finance": show_finance,
+            "finance_pnl": finance_pnl,
+            "milestone_curve": milestone_curve,
             "workers": workers,
             "assignments": assignments,
         },
@@ -966,3 +1126,25 @@ async def quote_preview(
             "client": client or {},
         },
     )
+
+
+@router.get("/{project_id}/finance.pdf")
+async def export_finance_pdf(
+    project_id: int,
+    user: dict = Depends(require_admin),
+):
+    """导出项目损益报表 PDF（A4 横向）。仅 admin。"""
+    if not user_can_access_project(user, project_id):
+        raise HTTPException(status_code=403, detail="无权访问")
+    project = _get_project_or_404(project_id)
+    pnl = pnl_service.get_pnl(project_id)
+    curve = pnl_service.get_milestone_curve(project_id)
+    pdf_bytes = build_finance_pdf(project, pnl, curve, get_studio_defaults())
+    filename = f"PnL-{project.get('code') or project_id}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+

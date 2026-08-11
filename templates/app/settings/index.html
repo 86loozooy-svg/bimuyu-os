@@ -10,6 +10,9 @@
   <a class="tab {% if tab == 'public' %}active{% endif %}" href="?tab=public">公开站管理</a>
   <a class="tab {% if tab == 'account' %}active{% endif %}" href="?tab=account">账户</a>
   <a class="tab {% if tab == 'notification' %}active{% endif %}" href="?tab=notification">通知配置</a>
+  <a class="tab {% if tab == 'appearance' %}active{% endif %}" href="?tab=appearance">外观</a>
+  <a class="tab {% if tab == 'data' %}active{% endif %}" href="?tab=data">数据</a>
+  <a class="tab {% if tab == 'about' or tab == 'license' %}active{% endif %}" href="?tab=about">关于和服务</a>
   <a class="tab" href="/app/settings/ai-cost">智能造价·AI</a>
 </div>
 
@@ -303,7 +306,7 @@
       {% if user.avatar_url %}
       <img src="{{ user.avatar_url }}" alt="头像" style="width:108px;height:108px;border-radius:50%;object-fit:cover;border:2px solid #63615A">
       {% else %}
-      <div style="width:108px;height:108px;border-radius:50%;background:#63615A;display:flex;align-items:center;justify-content:center;color:#fff;font-size:2rem;font-weight:600">{{ (user.display_name or user.email)[0:1] | upper }}</div>
+      <div style="width:108px;height:108px;border-radius:50%;background:#63615A;display:flex;align-items:center;justify-content:center;color:var(--text-primary);font-size:2rem;font-weight:600">{{ (user.display_name or user.email)[0:1] | upper }}</div>
       {% endif %}
       <form method="post" action="/app/settings/account/avatar" enctype="multipart/form-data" style="margin-top:12px">
         <div class="form-group" style="margin:0">
@@ -367,6 +370,67 @@
       <button type="submit" class="btn btn-primary">保存通知配置</button>
     </div>
   </form>
+</div>
+
+<div class="card" style="margin-top:24px">
+  <h3 style="margin-bottom:8px">消息通道</h3>
+  <p style="color:var(--muted);font-size:.85rem;margin-bottom:20px">选择通知触达方式。站内消息始终开启；企业微信通道需先在上方配置 Webhook。</p>
+  <form method="post" action="/app/notifications/prefs" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="form-group">
+      <label>站内消息</label>
+      <label style="display:flex;align-items:center;gap:8px;font-weight:400">
+        <input type="checkbox" name="in_app" {% if prefs.get('in_app', true) %}checked{% endif %}> 在后台消息中心显示
+      </label>
+    </div>
+    <div class="form-group">
+      <label>邮件推送</label>
+      <label style="display:flex;align-items:center;gap:8px;font-weight:400">
+        <input type="checkbox" name="email" {% if prefs.get('email', false) %}checked{% endif %}> 通过邮件推送（需配置 SMTP）
+      </label>
+    </div>
+    <div class="form-group">
+      <label>企业微信</label>
+      <label style="display:flex;align-items:center;gap:8px;font-weight:400">
+        <input type="checkbox" name="wecom" {% if prefs.get('wecom', false) %}checked{% endif %}> 推送到企业微信（需配置 Webhook）
+      </label>
+    </div>
+    <div class="form-group" style="grid-column:1/-1;display:flex;justify-content:flex-end">
+      <button type="submit" class="btn btn-primary">保存通道设置</button>
+    </div>
+  </form>
+</div>
+{% elif tab == 'appearance' %}
+<div class="card">
+  <h3 style="margin-bottom:8px">外观</h3>
+  <p style="color:var(--muted);font-size:.85rem">主题、强调色与界面密度设置。当前已支持深 / 浅色自动切换（≥18:00 转暗）。更多外观选项正在规划中。</p>
+</div>
+<div class="card">
+  <h3 style="margin-bottom:8px">新手引导</h3>
+  <p style="color:var(--muted);font-size:.85rem;margin-bottom:16px">已跳过引导？可随时在这里重新观看 5 步上手引导。</p>
+  <button type="button" class="btn btn-outline" onclick="fetch('/app/onboarding/reset',{method:'POST'}).then(function(){ window.startOnboarding(); })"><i data-lucide="sparkles"></i> 重新观看新手引导</button>
+</div>
+
+{% elif tab == 'data' %}
+<div class="card">
+  <h3 style="margin-bottom:8px">数据</h3>
+  <p style="color:var(--muted);font-size:.85rem">导出 / 备份工作台数据（项目、报价、客户、资料库）。数据管理功能正在规划中。</p>
+</div>
+
+{% elif tab == 'about' or tab == 'license' %}
+<div class="card" style="margin-bottom:16px">
+  <h3 style="margin-bottom:8px">关于 vsence 问世</h3>
+  <p style="color:var(--muted);font-size:.85rem">Studio OS · 设计工作室经营系统。版本 1.0.0。</p>
+</div>
+
+<div class="card">
+  <h3 style="margin-bottom:8px">服务与授权</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px">
+    <div class="form-group"><label>授权状态</label><input value="已激活" readonly style="background:var(--color-surface);color:var(--color-text-secondary)"></div>
+    <div class="form-group"><label>License 类型</label><input value="Studio OS 专业版" readonly style="background:var(--color-surface);color:var(--color-text-secondary)"></div>
+    <div class="form-group"><label>到期时间</label><input value="永久" readonly style="background:var(--color-surface);color:var(--color-text-secondary)"></div>
+    <div class="form-group"><label>设备上限</label><input value="不限制" readonly style="background:var(--color-surface);color:var(--color-text-secondary)"></div>
+  </div>
+  <p style="color:var(--muted);font-size:.85rem;margin-top:16px">License 管理与激活密钥功能正在规划中，当前为本地部署默认授权。</p>
 </div>
 {% endif %}
 {% endblock %}

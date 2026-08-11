@@ -29,3 +29,17 @@ Thumbs.db
 static/uploads/*
 !static/uploads/.gitkeep
 data/studio.db
+
+# Scratch / design backups / local helpers (do not commit)
+_design_backup_*/
+_verify_account.sh
+demo/
+docs/
+logo2.png
+logo3.svg
+logo_视觉 1.svg
+*.svg.bak
+
+# Local scratch previews / stray images
+preview_workbench.html
+wangge.jpg

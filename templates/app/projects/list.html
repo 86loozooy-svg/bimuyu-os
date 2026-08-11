@@ -6,6 +6,19 @@
   <p style="color:var(--color-text-secondary);font-size:.875rem;margin-top:4px">共 {{ projects | length }} 个项目</p>
 </div>
 
+{# ── 本地上传入口 (Step 2) ── #}
+<div class="import-region">
+  <span class="import-icon"><i data-lucide="file-spreadsheet"></i></span>
+  <div class="import-body">
+    <div class="import-title">批量导入项目</div>
+    <div class="import-steps">下载模板 → 工头填写 → 上传自动生成项目</div>
+  </div>
+  <div class="import-actions">
+    <a href="/app/projects/template.xlsx" class="btn btn-sm btn-outline"><i data-lucide="download"></i> 下载模板</a>
+    <a href="/app/projects/import" class="btn btn-sm btn-primary"><i data-lucide="upload"></i> 上传 Excel</a>
+  </div>
+</div>
+
 {# ── 筛选 ── #}
 <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:end">
   <div class="form-group" style="margin:0">
@@ -132,6 +145,9 @@
       </form>
     </div>
     {% endif %}
+    <div style="padding:8px 16px;border-top:1px solid var(--color-border);display:flex;justify-content:flex-end" onclick="event.stopPropagation()">
+      <button type="button" class="btn btn-sm btn-outline" onclick="openShareModal('project', {{ p.id }}, {{ p.name | tojson }})"><i data-lucide="share-2"></i> 分享</button>
+    </div>
   </div>
   {% else %}
   <div class="card" style="grid-column:1/-1;text-align:center;padding:32px;color:var(--color-text-tertiary)">

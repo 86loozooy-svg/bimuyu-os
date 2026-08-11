@@ -10,7 +10,6 @@
    ========================================================= */
 
 :root {
-  --case-bg: #f4f2ef;          /* 站点浅米色 */
   --case-ink: #1a1614;
   --case-muted: #63615a;
   --case-accent: #c8ff00;      /* greenyellow 主色 */
@@ -111,6 +110,7 @@
   font-size: 65px;
   font-weight: 300;
   line-height: 1.1;
+  overflow-wrap: break-word;
   text-shadow: 0 2px 14px rgba(244, 242, 239, .7);
 }
 .case-title h2 span {
@@ -147,9 +147,15 @@
 @media (max-width: 768px) {
   .case-showcase { height: auto; min-height: 68vh; }
   .case-title {
-    position: relative;
-    width: 100%;
-    padding: 40px 20px;
+    position: absolute;
+    z-index: 2;
+    top: auto;
+    left: 20px;
+    bottom: 40px;
+    width: auto;
+    max-width: calc(100% - 40px);
+    padding: 0;
+    pointer-events: none;            /* 与桌面一致：滚轮/滑动穿透到下方网格，按钮单独开启 */
   }
   /* 移动端大标题降一档，避免 80px 在小屏溢出折行 */
   .case-title h2,

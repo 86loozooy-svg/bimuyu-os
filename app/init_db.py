@@ -364,7 +364,38 @@ def _migrate_schema() -> None:
             {
                 "avatar_url": "TEXT",
                 "username": "TEXT",
+                # 权益等级 + 预留字段（login_days / earnings 预留但不展示）
+                "membership_level": "TEXT DEFAULT 'standard'",
+                "login_days": "INTEGER DEFAULT 0",
+                "earnings": "REAL DEFAULT 0",
+                # 新手引导：0=未完成(需弹) / 1=已完成或跳过(不再弹)
+                "onboarding_done": "INTEGER DEFAULT 0",
             },
+        )
+
+        # 分享查看：只读令牌安全模型
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS share_tokens (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                token TEXT UNIQUE NOT NULL,
+                created_by INTEGER,
+                target_type TEXT NOT NULL,
+                target_id INTEGER,
+                permission TEXT DEFAULT 'readonly',
+                access_mode TEXT DEFAULT 'link',
+                password_hash TEXT,
+                expires_at DATETIME,
+                revoked BOOLEAN DEFAULT FALSE,
+                access_count INTEGER DEFAULT 0,
+                title TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                last_access_at DATETIME
+            )
+            """
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_share_token ON share_tokens(token)"
         )
 
         # 回灌已有里程碑：补齐 start/end/status，让甘特图立刻可见。
@@ -427,6 +458,72 @@ def ensure_cases_columns() -> None:
                 "category": "TEXT",
             },
         )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def ensure_pnl_columns() -> None:
+    """P0: 项目损益派生列（cost/profit/margin_pct），幂等，SQLite 安全。
+
+    字段仅由 app.services.pnl 重算落库，不允许客户端直写。
+    """
+    conn = get_connection()
+    try:
+        _add_columns(
+            conn,
+            "projects",
+            {
+                "cost": "REAL DEFAULT 0",
+                "profit": "REAL",
+                "margin_pct": "REAL",
+            },
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def ensure_notifications() -> None:
+    """P3: 消息中心通知表 + 接收偏好表（幂等），并 seed 一条系统公告。"""
+    conn = get_connection()
+    try:
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS notifications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                studio_id INTEGER DEFAULT 1,
+                type TEXT NOT NULL,
+                title TEXT NOT NULL,
+                body TEXT,
+                link TEXT,
+                is_read INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )"""
+        )
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS notification_prefs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                channel TEXT NOT NULL UNIQUE,
+                enabled INTEGER DEFAULT 1
+            )"""
+        )
+        for ch, en in (("in_app", 1), ("email", 1), ("wecom", 0)):
+            conn.execute(
+                "INSERT OR IGNORE INTO notification_prefs (channel, enabled) VALUES (?, ?)",
+                (ch, en),
+            )
+        cnt = conn.execute("SELECT COUNT(*) FROM notifications").fetchone()[0]
+        if cnt == 0:
+            conn.execute(
+                "INSERT INTO notifications (studio_id, type, title, body, link) VALUES (?,?,?,?,?)",
+                (
+                    1,
+                    "announcement",
+                    "欢迎使用 Studio OS 消息中心",
+                    "项目阶段流转、发票到期等事件将在此推送，点击右上角铃铛查看。",
+                    "/app/notifications",
+                ),
+            )
         conn.commit()
     finally:
         conn.close()

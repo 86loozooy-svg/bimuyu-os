@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ share.title }} · 只读分享</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/halo.css">
+  <style>
+    .share-page { max-width: 760px; margin: 0 auto; padding: 32px 20px 56px; }
+    .share-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .share-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; }
+    .share-brand .brand-mark { width: 22px; height: 22px; background: var(--color-primary); border-radius: 5px; }
+    .share-readonly { display: inline-flex; align-items: center; gap: 6px; font-size: .75rem; font-weight: 700; color: var(--color-info); background: var(--color-info-soft); padding: 4px 10px; border-radius: 999px; }
+    .share-meta { display: flex; gap: 16px; flex-wrap: wrap; font-size: .8125rem; color: var(--color-text-secondary); margin: 14px 0 20px; }
+    .share-milestones { list-style: none; padding: 0; margin: 0; }
+    .share-milestones li { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--color-border); font-size: .875rem; }
+    .share-foot { margin-top: 28px; font-size: .75rem; color: var(--color-text-muted); text-align: center; }
+  </style>
+</head>
+<body style="background:var(--color-background);min-height:100vh">
+  <div class="share-page">
+    <div class="share-head">
+      <div class="share-brand"><span class="brand-mark"></span> Studio OS</div>
+      <span class="share-readonly"><i data-lucide="lock"></i> 只读分享</span>
+    </div>
+
+    {% if payload and payload.type == 'project' %}
+      {% set p = payload.project %}
+      <div class="card" style="padding:24px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+          <div>
+            <h1 style="margin:0;font-size:1.5rem">{{ p.name }}</h1>
+            <div style="color:var(--color-text-muted);font-size:.8125rem;margin-top:4px">{{ p.code }}</div>
+          </div>
+          <span class="badge" data-tone="info">{{ p.status }}</span>
+        </div>
+        <div class="share-meta">
+          <span>客户：{{ p.client_name or '—' }}</span>
+          {% if p.deadline %}<span>截止：{{ p.deadline }}</span>{% endif %}
+        </div>
+        {% if p.description %}<p style="color:var(--color-text-secondary);font-size:.9375rem;line-height:1.6">{{ p.description }}</p>{% endif %}
+
+        <h4 style="margin:20px 0 8px">关键里程碑</h4>
+        <ul class="share-milestones">
+          {% for m in payload.milestones %}
+          <li>
+            <span style="color:{% if m.done %}var(--color-success){% else %}var(--color-text-muted){% endif %}">
+              <i data-lucide="{% if m.done %}check-circle{% else %}circle{% endif %}"></i>
+            </span>
+            <span style="flex:1">{{ m.title or '里程碑' }}</span>
+            {% if m.due_date %}<span style="color:var(--color-text-muted);font-size:.8125rem">{{ m.due_date }}</span>{% endif %}
+          </li>
+          {% else %}
+          <li style="color:var(--color-text-muted)">暂无里程碑</li>
+          {% endfor %}
+        </ul>
+      </div>
+
+    {% elif payload and payload.type == 'case' %}
+      {% set c = payload.case %}
+      <div class="card" style="padding:24px">
+        <h1 style="margin:0 0 6px;font-size:1.5rem">{{ c.title }}</h1>
+        {% if c.subtitle %}<div style="color:var(--color-text-secondary)">{{ c.subtitle }}</div>{% endif %}
+        {% if c.description %}<p style="color:var(--color-text-secondary);font-size:.9375rem;line-height:1.6;margin-top:16px">{{ c.description }}</p>{% endif %}
+      </div>
+
+    {% else %}
+      <div class="card" style="padding:32px;text-align:center;color:var(--color-text-muted)">分享内容暂不可用或已失效。</div>
+    {% endif %}
+
+    <div class="share-foot">本页面为只读分享，由 Studio OS 创建者生成，不可编辑。</div>
+  </div>
+  <script src="https://unpkg.com/lucide@latest" defer></script>
+  <script>document.addEventListener('DOMContentLoaded', function(){ if (window.lucide && lucide.createIcons) lucide.createIcons(); });</script>
+</body>
+</html>

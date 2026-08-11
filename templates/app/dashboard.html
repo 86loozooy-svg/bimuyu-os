@@ -1,272 +1,314 @@
 {% extends "app/base.html" %}
-{% block title %}工作台 — vsence问世{% endblock %}
+{% block title %}工作台 — Studio OS{% endblock %}
 {% block content %}
-<div class="app-header">
+
+{# ── 顶部通栏：标题 + 极简用户标签/操作（无左侧大卡片） ── #}
+<div class="wb-topbar">
   <div>
-    <div class="eyebrow" style="margin-bottom:8px">Overview</div>
-    <h1>工作台</h1>
-    <p style="margin-top:6px">你好，{{ user.display_name or user.email }}</p>
+    <div class="wb-topbar__title">工作台</div>
+    <div class="wb-topbar__sub">一切如常推进 · 这是你的全局经营一览</div>
   </div>
-  <div class="page-actions">
-    <a href="/app/projects/new" class="btn btn-primary">
-      <i data-lucide="plus"></i>
-      新建项目
-    </a>
-  </div>
-</div>
-
-{# ── Stat tiles ── #}
-<div class="stats-grid">
-  <article class="stat-tile" data-tone="info">
-    <div class="stat-head">
-      <span class="stat-eyebrow">进行中项目</span>
-      <i data-lucide="folder-kanban"></i>
-    </div>
-    <div class="stat-value">{{ stats.active }}</div>
-    <div class="stat-meta">
-      <span class="chip" data-tone="info">Live</span>
-      <svg class="stat-spark" viewBox="0 0 96 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="0,22 12,18 24,20 36,14 48,16 60,10 72,12 84,7 96,4" />
-      </svg>
-    </div>
-  </article>
-
-  <article class="stat-tile" data-tone="warning">
-    <div class="stat-head">
-      <span class="stat-eyebrow">本周到期</span>
-      <i data-lucide="clock"></i>
-    </div>
-    <div class="stat-value">{{ stats.due_week }}</div>
-    <div class="stat-meta">
-      <span class="chip" data-tone="warning">Attention</span>
-      <svg class="stat-spark" viewBox="0 0 96 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="0,18 12,20 24,16 36,22 48,18 60,24 72,20 84,26 96,22" />
-      </svg>
-    </div>
-  </article>
-
-  {% if user.role == 'admin' %}
-  <article class="stat-tile" data-tone="success">
-    <div class="stat-head">
-      <span class="stat-eyebrow">待回款</span>
-      <i data-lucide="banknote"></i>
-    </div>
-    <div class="stat-value">¥{{ '{:,.0f}'.format(stats.pending_payment) }}</div>
-    <div class="stat-meta">
-      <span class="chip" data-tone="success">CNY</span>
-      <svg class="stat-spark" viewBox="0 0 96 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="0,24 12,22 24,18 36,20 48,12 60,14 72,10 84,6 96,8" />
-      </svg>
-    </div>
-  </article>
-  {% endif %}
-
-  <article class="stat-tile" data-tone="primary">
-    <div class="stat-head">
-      <span class="stat-eyebrow">待跟进线索</span>
-      <i data-lucide="target"></i>
-    </div>
-    <div class="stat-value">{{ stats.leads }}</div>
-    <div class="stat-meta">
-      <span class="chip">Pipeline</span>
-      <svg class="stat-spark" viewBox="0 0 96 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="0,20 12,22 24,16 36,18 48,12 60,14 72,8 84,12 96,5" />
-      </svg>
-    </div>
-  </article>
-</div>
-
-{# ── Charts + quick actions ── #}
-<div class="grid-2" style="margin-bottom:var(--space-2)">
-  <div class="card" style="position:relative">
-    <div class="card-header">
-      <h3 class="card-title">项目状态分布</h3>
-      <span class="chip" data-tone="neutral">实时</span>
-    </div>
-    <div style="position:relative;height:280px">
-      <canvas id="statusChart"></canvas>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-header">
-      <h3 class="card-title">快捷入口</h3>
-    </div>
-    <div class="quick-grid">
-      <a href="/app/projects" class="quick-card">
-        <span class="quick-icon" style="color:var(--color-info);background:var(--color-info-soft)">
-          <i data-lucide="folder-kanban"></i>
-        </span>
-        <span class="quick-title">项目列表</span>
-        <span class="quick-desc">查看全部项目档案与进度</span>
-      </a>
-      <a href="/app/pipeline" class="quick-card">
-        <span class="quick-icon" style="color:var(--color-primary);background:var(--color-primary-soft)">
-          <i data-lucide="kanban-square"></i>
-        </span>
-        <span class="quick-title">线索看板</span>
-        <span class="quick-desc">拖拽卡片更新项目阶段</span>
-      </a>
-      <a href="/app/library" class="quick-card">
-        <span class="quick-icon" style="color:var(--color-warning);background:var(--color-warning-soft)">
-          <i data-lucide="library"></i>
-        </span>
-        <span class="quick-title">资料库</span>
-        <span class="quick-desc">材料、人工与 BOQ 模板</span>
-      </a>
-      <a href="/app/settings" class="quick-card">
-        <span class="quick-icon" style="color:var(--color-success);background:var(--color-success-soft)">
-          <i data-lucide="settings-2"></i>
-        </span>
-        <span class="quick-title">系统设置</span>
-        <span class="quick-desc">工作室档案与 CMS 管理</span>
-      </a>
-    </div>
+  <div class="wb-topbar__right">
+    <a href="/app/projects/new" class="btn btn-accent"><i data-lucide="plus"></i>新建项目</a>
+    <span class="wb-topbar__user">
+      <span class="who">你好，{{ user.display_name or user.username }}</span>
+      <span class="role">｜</span>
+      <span class="membership-badge" data-level="{{ level.level }}">{{ level.label }}</span>
+    </span>
+    <button class="wb-iconbtn" title="搜索"><i data-lucide="search"></i></button>
+    <button class="wb-iconbtn" title="通知"><i data-lucide="bell"></i></button>
+    <button class="wb-iconbtn" title="设置"><i data-lucide="settings"></i></button>
   </div>
 </div>
 
-{# ── Project list ── #}
-<div class="card">
-  <div class="card-header">
-    <h3 class="card-title">项目进度</h3>
-    <a href="/app/projects" class="btn btn-sm btn-outline">查看全部</a>
+{# ── 升级提示条：.card + 左侧 3px accent 实线边（可关闭，localStorage 记 7 天） ── #}
+{% if promo and promo.visible %}
+<div class="wb-upgrade" id="wbUpgrade">
+  <div class="wb-upgrade__body">
+    <div class="wb-upgrade__t">{{ promo.title }}</div>
   </div>
-  {% if projects %}
-  <table>
-    <thead>
-      <tr>
-        <th>编号</th>
-        <th>项目</th>
-        <th>客户</th>
-        <th>阶段</th>
-        <th>截止日期</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for p in projects[:8] %}
-      <tr>
-        <td><a href="/app/projects/{{ p.id }}">{{ p.code }}</a></td>
-        <td>{{ p.name }}</td>
-        <td>{{ p.client_name or '—' }}</td>
-        <td>
-          <span class="badge status-pill-{{ p.status }}">{{ status_labels.get(p.status, p.status) }}</span>
-        </td>
-        <td class="mono">{{ p.deadline or '—' }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p class="empty-cell">暂无项目，<a href="/app/projects/new" style="color:var(--color-primary-hover)">新建项目</a></p>
-  {% endif %}
-</div>
-
-{% if milestones %}
-<div class="card">
-  <div class="card-header">
-    <h3 class="card-title">本周待办</h3>
-    <span class="chip" data-tone="info">{{ milestones|length }} 项</span>
-  </div>
-  <table>
-    <thead>
-      <tr><th>里程碑</th><th>项目</th><th>截止</th></tr>
-    </thead>
-    <tbody>
-      {% for m in milestones %}
-      <tr>
-        <td>{{ m.name }}</td>
-        <td><a href="/app/projects/{{ m.project_id }}">{{ m.project_name }}</a></td>
-        <td class="mono">{{ m.due_date }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="wb-upgrade__spacer"></div>
+  <button class="btn btn-accent btn-sm" id="wbUpgradeBtn">{{ promo.btn }}</button>
+  <span class="wb-upgrade__close" id="wbUpgradeClose" title="暂不提醒">✕ 暂不提醒</span>
 </div>
 {% endif %}
 
-{% if tasks_today %}
-<div class="card">
-  <div class="card-header">
-    <h3 class="card-title">今日待办</h3>
-    <span class="chip" data-tone="warning">{{ tasks_today|length }} 项</span>
-    <a href="/app/tasks" class="btn btn-sm btn-outline" style="margin-left:auto">全部待办</a>
-  </div>
-  <table>
-    <thead>
-      <tr><th>任务</th><th>项目</th><th>到期</th><th>优先级</th></tr>
-    </thead>
-    <tbody>
-      {% for t in tasks_today %}
-      <tr>
-        <td>{{ t.title }}</td>
-        <td>{% if t.project_name %}<a href="/app/projects/{{ t.project_id }}">{{ t.project_name }}</a>{% else %}—{% endif %}</td>
-        <td class="mono">{{ t.due_date }}{% if t.due_time %} {{ t.due_time }}{% endif %}</td>
-        <td>
-          {% if t.priority == 'high' %}<span class="badge" style="background:rgba(255,58,92,.18);color:#ff6b6b">高</span>
-          {% elif t.priority == 'low' %}<span class="badge">低</span>
-          {% else %}<span class="badge" style="background:rgba(245,213,71,.18);color:#f5d547">中</span>{% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-{% endif %}
+<div class="bento">
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  {# ── 全局经营指标（4 卡，点击跳转并带筛选；进行中高亮 accent） ── #}
+  {% for m in metrics %}
+  <a class="bento-card bento-metric bento-m{{ loop.index }}{% if m.accent %} is-accent{% endif %}" href="{{ m.url }}">
+    <div class="bento-metric__head">
+      <span class="bento-metric__label">{{ m.label }}</span>
+      <i data-lucide="{{ m.icon }}" class="bento-metric__icon"></i>
+    </div>
+    <div class="bento-metric__value">{{ m.value }}</div>
+    <div class="bento-metric__meta">{{ m.meta }} · 点击查看 →</div>
+  </a>
+  {% endfor %}
+
+  {# ── 重点项目栏目（通栏 12 列：TOP1 通栏 + 下层三栏自适应） ── #}
+  <section class="bento-card bento-kp">
+    <h3 class="bento-title">
+      <span class="pill pill-accent">重点项目</span>
+      <a class="bento-link" href="/app/projects">查看全部项目</a>
+    </h3>
+    <div id="kpTop"></div>
+    <div class="kp-divider"></div>
+    <div id="kpBottom" class="kp-bottom"></div>
+  </section>
+
+  {# ── 项目状态分布（SVG 饼图 ≥140px + 竖向图例） ── #}
+  <section class="bento-card bento-status">
+    <h3 class="bento-title">项目状态分布</h3>
+    <div class="kp-donut-wrap">
+      <div class="kp-donut">
+        <svg width="140" height="140" viewBox="0 0 140 140" aria-hidden="true">
+          <circle cx="70" cy="70" r="56" fill="none" stroke="var(--border)" stroke-width="16"/>
+          {% set C = 351.86 %}
+          {% for s in donut_segments %}
+          <circle cx="70" cy="70" r="56" fill="none" stroke="{{ s.color }}" stroke-width="16"
+                  stroke-linecap="butt"
+                  stroke-dasharray="{{ (s.dash/100*C)|round(2) }} {{ C }}"
+                  stroke-dashoffset="{{ (-(s.offset/100*C))|round(2) }}"
+                  transform="rotate(-90 70 70)"/>
+          {% endfor %}
+        </svg>
+        <span class="kp-donut__center">{{ donut_center }}</span>
+      </div>
+      <div class="kp-legend">
+        {% for l in donut_legend %}
+        <a class="kp-legend__item" href="/app/projects">
+          <span class="kp-legend__dot" style="background:{{ l.color }}"></span>
+          <span class="kp-legend__name">{{ l.label }}</span>
+          <span class="kp-legend__count">{{ l.count }}</span>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  {# ── 今日时间轴（全中文） ── #}
+  <section class="bento-card bento-timeline">
+    <h3 class="bento-title">今日时间轴｜{{ month_label }}</h3>
+    <div class="wb-tl">
+      {% for it in timeline %}
+      <div class="wb-tl__it">
+        <span class="wb-tl__dot" style="background:{{ it.color }}"></span>
+        <span class="wb-tl__t">{{ it.time }}</span>
+        <span class="wb-tl__e">{{ it.event }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    <button class="wb-cal__viewall">查看全部详情</button>
+  </section>
+
+  {# ── 最近动态流 ── #}
+  <section class="bento-card bento-activity">
+    <h3 class="bento-title">
+      最近动态
+      <a class="bento-link" href="/app/notifications">全部</a>
+    </h3>
+    <div class="activity-list">
+      {% for a in activity %}
+      <div class="activity-item">
+        <span class="activity-item__icon {{ a.icls }}"><i data-lucide="{{ a.icon }}"></i></span>
+        <div class="activity-item__main">
+          <div class="activity-item__text">{{ a.text | safe }}</div>
+          <div class="activity-item__time">{{ a.time }}</div>
+        </div>
+      </div>
+      {% else %}
+      <div class="activity-empty">暂无动态</div>
+      {% endfor %}
+    </div>
+  </section>
+
+  {# ── 快速操作 ── #}
+  <section class="bento-card bento-quick">
+    <h3 class="bento-title">快速操作</h3>
+    <div class="wb-quick">
+      {% for q in quick_actions %}
+      <a class="wb-quick__btn" href="{{ q.url }}"><i data-lucide="{{ q.icon }}"></i>{{ q.label }}</a>
+      {% endfor %}
+    </div>
+  </section>
+
+</div>
+
+{# ── 手动新增重点项目 模态框 ── #}
+<div class="kp-modal" id="kpModal" hidden>
+  <div class="kp-modal__overlay" data-close></div>
+  <div class="kp-modal__panel" role="dialog" aria-modal="true">
+    <div class="kp-modal__head">
+      <span>手动新增重点项目</span>
+      <button class="kp-modal__x" data-close>✕</button>
+    </div>
+    <div class="kp-modal__body" id="kpModalBody"></div>
+  </div>
+</div>
+
 <script>
-{% if status_dist %}
-const statusLabels = {{ status_labels | tojson }};
-const statusDist = {{ status_dist | tojson }};
-const statusKeys = Object.keys(statusDist);
-const statusColors = {
-  lead: '#5C6170',
-  brief: '#3DD7E5',
-  quoting: '#F5D547',
-  signed: '#2BE08C',
-  designing: '#5B6BFF',
-  delivering: '#FF3A5C',
-  done: '#2BE08C'
-};
-const ctx = document.getElementById('statusChart');
-if (ctx && statusKeys.some(k => statusDist[k] > 0)) {
-  Chart.defaults.color = '#9AA0AE';
-  Chart.defaults.borderColor = '#2A2D38';
-  new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: statusKeys.map(k => statusLabels[k] || k),
-      datasets: [{
-        data: statusKeys.map(k => statusDist[k]),
-        backgroundColor: statusKeys.map(k => statusColors[k] || '#5C6170'),
-        borderWidth: 2,
-        borderColor: '#14151C',
-        hoverOffset: 6
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      cutout: '62%',
-      plugins: {
-        legend: {
-          position: 'right',
-          labels: {
-            font: { family: "'Inter', sans-serif", size: 12 },
-            padding: 16,
-            usePointStyle: true,
-            pointStyle: 'circle'
-          }
-        }
-      }
-    }
-  });
-} else {
-  ctx.parentElement.innerHTML = '<p class="empty-cell" style="line-height:280px">暂无项目数据</p>';
-}
-{% endif %}
+var KPBASE = '/app/dashboard/key-projects';
+var ALL_PROJECTS = {{ all_projects_json | safe }};
+var shownIds = {};
 
-// Re-initialize icons for dynamically rendered content
-if (window.lucide && lucide.createIcons) lucide.createIcons();
+function kpSubtasksHTML(subs){
+  if(!subs || !subs.length) return '';
+  return '<div class="kp-subs">' + subs.map(function(s){
+    return '<div class="kp-sub ' + s.tone + '">' +
+      '<span class="kp-sub__name">' + s.name + '</span>' +
+      '<span class="kp-sub__bar"><span style="width:' + s.pct + '%"></span></span>' +
+      '<span class="kp-sub__pct">' + s.pct + '%</span></div>';
+  }).join('') + '</div>';
+}
+function kpTop1HTML(p){
+  var C = 326.7;
+  var off = C * (1 - p.progress/100);
+  return '' +
+    '<div class="kp-top">' +
+      '<div class="kp-ring">' +
+        '<svg width="120" height="120" viewBox="0 0 120 120">' +
+          '<circle cx="60" cy="60" r="52" fill="none" stroke="var(--border)" stroke-width="10"/>' +
+          '<circle cx="60" cy="60" r="52" fill="none" stroke="var(--accent)" stroke-width="10" ' +
+            'stroke-linecap="round" stroke-dasharray="' + C + '" stroke-dashoffset="' + off.toFixed(1) + '" transform="rotate(-90 60 60)"/>' +
+        '</svg>' +
+        '<div class="kp-ring__text">' + p.progress + '%</div>' +
+      '</div>' +
+      '<div class="kp-info">' +
+        '<div class="kp-info__top">' +
+          '<a class="kp-info__name" href="/app/projects/' + p.id + '">' + p.name + '</a>' +
+          '<button class="kp-dot" data-act="menu-top" data-id="' + p.id + '">···</button>' +
+        '</div>' +
+        '<div class="kp-info__meta">' +
+          '<span class="tag tag-accent">' + p.status_label + '</span>' +
+          '<span>负责人 · ' + p.client_name + '</span>' +
+        '</div>' +
+        '<div class="kp-info__row">金额 <b>' + p.amount + '</b> ｜ 截止 <b>' + (p.deadline || '未定') + '</b></div>' +
+        '<div class="focus-risk ' + p.risk_tone + '"><i data-lucide="alert-triangle"></i><span>' + p.risk_text + '</span></div>' +
+        kpSubtasksHTML(p.subtasks) +
+      '</div>' +
+    '</div>';
+}
+function kpOtherHTML(p, slot){
+  return '' +
+    '<div class="kp-card" data-slot="' + slot + '">' +
+      '<div class="kp-card__top">' +
+        '<a class="kp-card__name" href="/app/projects/' + p.id + '">' + p.name + '</a>' +
+        '<span class="kp-card__acts">' +
+          '<button class="kp-dot" data-act="menu-other" data-id="' + p.id + '" title="更换项目">···</button>' +
+          '<button class="kp-del" data-act="delete" data-id="' + p.id + '" title="删除">✕</button>' +
+        '</span>' +
+      '</div>' +
+      '<div class="kp-card__meta"><span class="tag tag-muted">' + p.status_label + '</span><span>' + p.amount + '</span></div>' +
+      '<span class="kp-card__bar"><span style="width:' + p.progress + '%"></span></span>' +
+    '</div>';
+}
+function kpAddHTML(){
+  return '<button class="kp-add" data-act="add"><i data-lucide="plus"></i><span>手动新增重点项目</span></button>';
+}
+function kpLayout(count){
+  // 返回 others 区每张卡的 grid-column（自适应拼合，无空洞）
+  if(count <= 1) return [];
+  if(count === 2) return ['1 / 7', '7 / 13'];           // TOP2(6) | +(6)
+  return ['1 / 6', '6 / 11', '11 / 13'];                 // TOP2(5) | TOP3(5) | +(2)
+}
+function renderKeyProjects(kp){
+  shownIds = {};
+  var top = document.getElementById('kpTop');
+  var bottom = document.getElementById('kpBottom');
+  top.innerHTML = kp.top1 ? kpTop1HTML(kp.top1) : '<p class="activity-empty">暂无进行中的项目，<a href="/app/projects/new" style="color:var(--accent)">新建一个</a>。</p>';
+  if(kp.top1) shownIds[kp.top1.id] = 1;
+  bottom.innerHTML = '';
+  if(kp.count <= 1) return;  // 仅 TOP1 通栏，不显下层
+  var spans = kpLayout(kp.count);
+  kp.others.forEach(function(p, i){
+    shownIds[p.id] = 1;
+    var card = document.createElement('div');
+    card.style.gridColumn = spans[i] || '1 / 7';
+    card.innerHTML = kpOtherHTML(p, 'top' + (i+2));
+    bottom.appendChild(card);
+  });
+  var add = document.createElement('div');
+  add.style.gridColumn = spans[kp.others.length] || '7 / 13';
+  add.innerHTML = kpAddHTML();
+  bottom.appendChild(add);
+  if(window.lucide) lucide.createIcons();
+}
+function refreshKeyProjects(){
+  fetch(KPBASE, {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'action=show'})
+    .then(function(r){return r.json();})
+    .then(function(d){ if(d.ok) renderKeyProjects(d); })
+    .catch(function(){});
+}
+function kpPost(action, pid){
+  var body = 'action=' + encodeURIComponent(action) + (pid ? '&project_id=' + pid : '');
+  fetch(KPBASE, {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:body})
+    .then(function(r){return r.json();})
+    .then(function(d){ if(d.ok) renderKeyProjects(d); })
+    .catch(function(){});
+}
+
+// 事件委托：置顶 / 删除 / 更换 / 新增
+document.addEventListener('click', function(e){
+  var t = e.target.closest('[data-act]');
+  if(!t) return;
+  var act = t.getAttribute('data-act');
+  var id = t.getAttribute('data-id');
+  if(act === 'delete'){ kpPost('hide', id); }
+  else if(act === 'menu-top'){
+    var pinned = t.closest('.kp-top') && document.querySelector('.kp-info__name');
+    // 简单菜单：置顶/取消
+    var doPin = !t.classList.contains('is-pinned');
+    kpPost(doPin ? 'pin' : 'unpin', id);
+    t.classList.toggle('is-pinned');
+  }
+  else if(act === 'menu-other'){ openKpModal(id); }
+  else if(act === 'add'){ openKpModal(null); }
+});
+
+// 手动新增 / 更换 模态框
+function openKpModal(replaceId){
+  var modal = document.getElementById('kpModal');
+  var body = document.getElementById('kpModalBody');
+  var list = ALL_PROJECTS.filter(function(p){ return !shownIds[p.id] || (replaceId && p.id == replaceId); });
+  if(!list.length){ list = ALL_PROJECTS.slice(); }
+  body.innerHTML = list.map(function(p){
+    return '<button class="kp-modal__item" data-pick="' + p.id + '">' + p.name + '</button>';
+  }).join('') || '<div class="activity-empty">暂无可选项目</div>';
+  modal.hidden = false;
+  body.querySelectorAll('[data-pick]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var pid = b.getAttribute('data-pick');
+      modal.hidden = true;
+      // 若用于"更换"，先删除原项再显示新项
+      var after = function(){ kpPost('show', parseInt(pid)); };
+      if(replaceId){ kpPost('hide', parseInt(replaceId)); setTimeout(after, 120); }
+      else after();
+    });
+  });
+}
+document.querySelectorAll('#kpModal [data-close]').forEach(function(el){
+  el.addEventListener('click', function(){ document.getElementById('kpModal').hidden = true; });
+});
+
+// 升级提示条：关闭后 localStorage 记忆 7 天
+(function(){
+  var KEY='wb_upgrade_closed';
+  var bar=document.getElementById('wbUpgrade');
+  if(!bar) return;
+  try{ if(localStorage.getItem(KEY)) bar.style.display='none'; }catch(e){}
+  var close=document.getElementById('wbUpgradeClose');
+  if(close) close.addEventListener('click', function(){
+    bar.style.display='none';
+    try{ localStorage.setItem(KEY, String(Date.now())); }catch(e){}
+  });
+})();
+
+// 初始渲染
+(function(){
+  try { renderKeyProjects(JSON.parse('{{ key_json | safe }}')); } catch(e){}
+  if(window.lucide) lucide.createIcons();
+})();
 </script>
 {% endblock %}

@@ -7,9 +7,10 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Uplo
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from app.auth import hash_password, log_audit, require_admin, verify_password
+from app.auth import get_current_user, hash_password, log_audit, require_admin, verify_password
 from app.config import BASE_DIR, CONTACT_PATH, DATA_DIR
 from app.database import db_session, row_to_dict, rows_to_list
+from app.services import notifications as notif
 
 UPLOAD_DIR = BASE_DIR / "static" / "uploads"
 IMAGE_MAX_BYTES = 5 * 1024 * 1024  # 图片上传上限 5MB
@@ -106,6 +107,7 @@ async def settings_index(request: Request, user: dict = Depends(require_admin), 
             "projects": projects,
             "site": site_config,
             "client_logos": client_logos,
+            "prefs": notif.prefs(),
         },
     )
 
@@ -194,7 +196,7 @@ def _ensure_account_columns() -> None:
 
 @router.post("/account/avatar")
 async def upload_avatar(
-    user: dict = Depends(require_admin),
+    user: dict = Depends(get_current_user),
     avatar: UploadFile = File(...),
 ):
     _ensure_account_columns()
@@ -211,7 +213,7 @@ async def upload_avatar(
 
 @router.post("/account/profile")
 async def update_account_profile(
-    user: dict = Depends(require_admin),
+    user: dict = Depends(get_current_user),
     display_name: str = Form(""),
     username: str = Form(""),
     email: str = Form(""),
@@ -261,7 +263,7 @@ async def update_account_profile(
 
 @router.post("/account/password")
 async def change_account_password(
-    user: dict = Depends(require_admin),
+    user: dict = Depends(get_current_user),
     current_password: str = Form(""),
     new_password: str = Form(""),
     confirm_password: str = Form(""),

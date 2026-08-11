@@ -1,0 +1,151 @@
+{% extends "app/base.html" %}
+{% block title %}批量导入项目 — vsence问世{% endblock %}
+{% block content %}
+<section class="page">
+  <header class="page-head">
+    <div>
+      <h1 class="page-title">批量导入项目</h1>
+      <p class="page-sub">下载模板 → 填写 → 上传预览（异常行高亮）→ 确认批量建项目并自动归集损益。</p>
+    </div>
+    <a class="btn btn--primary" href="/app/projects/template.xlsx">
+      <i data-lucide="download"></i> 下载模板
+    </a>
+  </header>
+
+  <div class="card import-card">
+    <div class="import-toolbar">
+      <label class="file-btn">
+        <i data-lucide="upload"></i> 选择 Excel 文件
+        <input type="file" id="fileInput" accept=".xlsx,.xlsm" hidden>
+      </label>
+      <span id="fileName" class="import-fname"></span>
+      <button class="btn" id="previewBtn" disabled>解析预览</button>
+      <span id="parseMsg" class="import-msg"></span>
+    </div>
+
+    <div id="previewWrap" class="import-preview" hidden>
+      <div class="import-summary" id="importSummary"></div>
+      <div class="import-table-scroll">
+        <table class="table import-table" id="previewTable">
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="checkAll" aria-label="全选有效行"></th>
+              <th>行</th><th>项目名称</th><th>客户</th><th>行业</th><th>面积</th>
+              <th>工种</th><th>数量</th><th>单价</th><th>金额</th><th>状态</th><th>校验</th>
+            </tr>
+          </thead>
+          <tbody id="previewBody"></tbody>
+        </table>
+      </div>
+      <div class="import-actions">
+        <button class="btn btn--primary" id="confirmBtn">确认导入选中行</button>
+        <span id="confirmMsg" class="import-msg"></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function () {
+  const fileInput = document.getElementById('fileInput');
+  const fileName = document.getElementById('fileName');
+  const previewBtn = document.getElementById('previewBtn');
+  const parseMsg = document.getElementById('parseMsg');
+  const previewWrap = document.getElementById('previewWrap');
+  const previewBody = document.getElementById('previewBody');
+  const importSummary = document.getElementById('importSummary');
+  const checkAll = document.getElementById('checkAll');
+  const confirmBtn = document.getElementById('confirmBtn');
+  const confirmMsg = document.getElementById('confirmMsg');
+  let currentRows = [];
+
+  function esc(s) {
+    return (s == null ? '' : String(s)).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  }
+
+  fileInput.addEventListener('change', () => {
+    const f = fileInput.files[0];
+    fileName.textContent = f ? f.name : '';
+    previewBtn.disabled = !f;
+    parseMsg.textContent = '';
+    previewWrap.hidden = true;
+  });
+
+  previewBtn.addEventListener('click', async () => {
+    const f = fileInput.files[0];
+    if (!f) return;
+    parseMsg.textContent = '解析中…';
+    const fd = new FormData();
+    fd.append('file', f);
+    try {
+      const res = await fetch('/app/projects/import-preview', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!data.ok) { parseMsg.textContent = '⚠ ' + data.error; return; }
+      currentRows = data.rows;
+      renderPreview(data);
+      parseMsg.textContent = '';
+    } catch (e) {
+      parseMsg.textContent = '⚠ 解析失败：' + e.message;
+    }
+  });
+
+  function renderPreview(data) {
+    previewWrap.hidden = false;
+    const s = data.summary;
+    importSummary.innerHTML =
+      `共 <b>${s.total}</b> 行 · 有效 <b class="ok">${s.valid}</b> · 异常 <b class="err">${s.invalid}</b>`;
+    previewBody.innerHTML = '';
+    data.rows.forEach((r, i) => {
+      const tr = document.createElement('tr');
+      if (!r.ok) tr.className = 'import-row--error';
+      tr.innerHTML =
+        `<td><input type="checkbox" class="row-check" data-i="${i}" ${r.ok ? 'checked' : ''} ${r.ok ? '' : 'disabled'}></td>` +
+        `<td>${r.row}</td>` +
+        `<td>${esc(r.name)}</td>` +
+        `<td>${esc(r.client)}</td>` +
+        `<td>${esc(r.industry)}</td>` +
+        `<td>${r.area ?? ''}</td>` +
+        `<td>${esc(r.labor)}</td>` +
+        `<td>${r.qty ?? ''}</td>` +
+        `<td>${r.price ?? ''}</td>` +
+        `<td>${r.amount ?? ''}</td>` +
+        `<td>${esc(r.status)}</td>` +
+        `<td>${r.ok ? '<span class="ok">✓ 通过</span>' : '<span class="err">✗ ' + esc(r.errors.join('；')) + '</span>'}</td>`;
+      previewBody.appendChild(tr);
+    });
+    syncCheckAll();
+  }
+
+  checkAll.addEventListener('change', () => {
+    document.querySelectorAll('.row-check:not([disabled])').forEach(c => (c.checked = checkAll.checked));
+  });
+  function syncCheckAll() {
+    const all = document.querySelectorAll('.row-check:not([disabled])');
+    checkAll.checked = all.length > 0 && [...all].every(c => c.checked);
+  }
+
+  confirmBtn.addEventListener('click', async () => {
+    const selected = currentRows.filter((r, i) => {
+      const cb = document.querySelector(`.row-check[data-i="${i}"]`);
+      return cb && cb.checked && r.ok;
+    });
+    if (!selected.length) { confirmMsg.textContent = '⚠ 请至少选择一行有效数据'; return; }
+    confirmMsg.textContent = '导入中…';
+    try {
+      const res = await fetch('/app/projects/import-confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows: selected }),
+      });
+      const data = await res.json();
+      if (!data.ok) { confirmMsg.textContent = '⚠ ' + data.error; return; }
+      confirmMsg.textContent = `✓ 成功导入 ${data.created} 个项目`;
+      previewWrap.hidden = true;
+      fileInput.value = '';
+    } catch (e) {
+      confirmMsg.textContent = '⚠ 导入失败：' + e.message;
+    }
+  });
+})();
+</script>
+{% endblock %}

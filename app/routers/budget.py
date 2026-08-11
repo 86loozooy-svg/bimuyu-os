@@ -301,6 +301,8 @@ async def add_material(pid: int, request: Request, user: dict = Depends(get_curr
         )
         mid = cur.lastrowid
         row = row_to_dict(conn.execute("SELECT * FROM project_material WHERE id=?", (mid,)).fetchone())
+    from app.services import pnl
+    pnl.recalc_project(pid)
     return JSONResponse({"ok": True, "material": dict(row)})
 
 
@@ -334,6 +336,8 @@ async def update_material(
                 mid,
             ),
         )
+    from app.services import pnl
+    pnl.recalc_project(pid)
     return JSONResponse({"ok": True})
 
 
@@ -344,6 +348,8 @@ async def delete_material(pid: int, mid: int, user: dict = Depends(get_current_u
         raise HTTPException(status_code=403)
     with db_session() as conn:
         conn.execute("DELETE FROM project_material WHERE id=? AND project_id=?", (mid, pid))
+    from app.services import pnl
+    pnl.recalc_project(pid)
     return JSONResponse({"ok": True})
 
 
@@ -379,6 +385,8 @@ async def generate_from_cost(pid: int, request: Request, user: dict = Depends(ge
                     ),
                 )
                 created.append(mat_name)
+    from app.services import pnl
+    pnl.recalc_project(pid)
     return JSONResponse({"ok": True, "count": len(created), "created": created})
 
 
@@ -393,7 +401,9 @@ async def export_materials_excel(pid: int, user: dict = Depends(get_current_user
         studio = row_to_dict(conn.execute("SELECT * FROM studio_profile WHERE id=1").fetchone())
         materials = rows_to_list(
             conn.execute(
-                "SELECT * FROM project_material WHERE project_id=? ORDER BY category, sort_order, id",
+                "SELECT * FROM project_material WHERE project_id=? "
+                "AND status NOT IN ('deleted', 'cancelled') "
+                "ORDER BY category, sort_order, id",
                 (pid,),
             ).fetchall()
         )
@@ -418,7 +428,9 @@ async def export_materials_pdf(pid: int, user: dict = Depends(get_current_user))
         studio = row_to_dict(conn.execute("SELECT * FROM studio_profile WHERE id=1").fetchone())
         materials = rows_to_list(
             conn.execute(
-                "SELECT * FROM project_material WHERE project_id=? ORDER BY category, sort_order, id",
+                "SELECT * FROM project_material WHERE project_id=? "
+                "AND status NOT IN ('deleted', 'cancelled') "
+                "ORDER BY category, sort_order, id",
                 (pid,),
             ).fetchall()
         )

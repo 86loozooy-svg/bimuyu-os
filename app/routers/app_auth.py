@@ -40,7 +40,7 @@ async def login_submit(
             (datetime.now(timezone.utc).isoformat(), user["id"]),
         )
     log_audit(user["id"], "login", "user", user["id"])
-    redirect = RedirectResponse(url="/app/", status_code=status.HTTP_303_SEE_OTHER)
+    redirect = RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
     redirect.set_cookie(
         key=COOKIE_NAME,
         value=token,

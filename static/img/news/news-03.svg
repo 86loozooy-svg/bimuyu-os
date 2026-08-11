@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect fill="#e8e6e1" width="400" height="300"/>
+  <rect x="80" y="100" rx="6" fill="#555" width="240" height="100" opacity=".15"/>
+  <circle cx="160" cy="150" r="20" fill="#c9a96e" opacity=".8"/>
+  <circle cx="240" cy="150" r="20" fill="#8b7355" opacity=".8"/>
+  <rect x="130" y="220" rx="3" fill="#999" width="140" height="6"/>
+  <text x="200" y="270" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#666">Talk &amp; Panel</text>
+</svg>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect fill="#2e2823" width="400" height="300"/>
+  <ellipse cx="200" cy="150" rx="100" ry="60" fill="#c9a96e" opacity=".8"/>
+  <ellipse cx="200" cy="150" rx="60" ry="36" fill="#1a1614" opacity=".9"/>
+  <rect x="170" y="110" rx="4" fill="#c9a96e" width="60" height="80" opacity=".7"/>
+  <text x="200" y="270" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#aaa">Island Display</text>
+</svg>
