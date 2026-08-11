@@ -88,19 +88,21 @@
     </div>
   </section>
 
-  {# ── 今日时间轴（全中文） ── #}
+  {# ── 近期里程碑（真实数据，可点击跳转） ── #}
   <section class="bento-card bento-timeline">
-    <h3 class="bento-title">今日时间轴｜{{ month_label }}</h3>
+    <h3 class="bento-title">近期里程碑</h3>
     <div class="wb-tl">
       {% for it in timeline %}
       <div class="wb-tl__it">
         <span class="wb-tl__dot" style="background:{{ it.color }}"></span>
         <span class="wb-tl__t">{{ it.time }}</span>
-        <span class="wb-tl__e">{{ it.event }}</span>
+        {% if it.link %}<a class="wb-tl__e" href="{{ it.link }}">{{ it.event }}</a>{% else %}<span class="wb-tl__e">{{ it.event }}</span>{% endif %}
       </div>
+      {% else %}
+      <div class="activity-empty">未来 7 天暂无待办里程碑</div>
       {% endfor %}
     </div>
-    <button class="wb-cal__viewall">查看全部详情</button>
+    <a class="wb-cal__viewall" href="/app/projects">查看全部项目</a>
   </section>
 
   {# ── 最近动态流 ── #}

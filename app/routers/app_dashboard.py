@@ -1,7 +1,6 @@
 import json
 import math
 from datetime import date, timedelta
-import calendar as _cal
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -100,6 +99,115 @@ def _risk_text(p):
     if p["_risk"] >= 0.6:
         return ("is-warn", "进行中项目，注意推进节奏与交付质量")
     return ("is-ok", "进展正常，按计划推进中")
+
+
+def _fetch_projects(conn, project_ids):
+    """按权限拉取项目 + 汇总指标。返回 (projects, active_count, due_this_week, pending_payment, leads)。"""
+    today = date.today()
+    week_end = today + timedelta(days=7)
+    if project_ids is None:
+        projects = rows_to_list(
+            conn.execute(
+                "SELECT p.*, c.name as client_name FROM projects p "
+                "LEFT JOIN clients c ON p.client_id = c.id ORDER BY p.updated_at DESC"
+            ).fetchall()
+        )
+        active_count = conn.execute(
+            "SELECT COUNT(*) FROM projects WHERE status NOT IN ('done','lead')"
+        ).fetchone()[0]
+        due_this_week = conn.execute(
+            "SELECT COUNT(*) FROM projects WHERE deadline BETWEEN ? AND ? AND status != 'done'",
+            (today.isoformat(), week_end.isoformat()),
+        ).fetchone()[0]
+        pending_payment = conn.execute(
+            "SELECT COALESCE(SUM(amount),0) FROM invoices WHERE paid = 0"
+        ).fetchone()[0]
+        leads = conn.execute(
+            "SELECT COUNT(*) FROM projects WHERE status='lead'"
+        ).fetchone()[0]
+    elif project_ids:
+        ph = ",".join("?" * len(project_ids))
+        projects = rows_to_list(
+            conn.execute(
+                f"SELECT p.*, c.name as client_name FROM projects p "
+                f"LEFT JOIN clients c ON p.client_id = c.id WHERE p.id IN ({ph}) ORDER BY p.updated_at DESC",
+                project_ids,
+            ).fetchall()
+        )
+        active_count = sum(1 for p in projects if p["status"] not in ("done", "lead"))
+        due_this_week = sum(
+            1 for p in projects if p.get("deadline")
+            and today.isoformat() <= p["deadline"] <= week_end.isoformat()
+            and p["status"] != "done"
+        )
+        pending_payment = 0
+        leads = sum(1 for p in projects if p["status"] == "lead")
+    else:
+        projects = []
+        active_count = due_this_week = pending_payment = leads = 0
+    return projects, active_count, due_this_week, pending_payment, leads
+
+
+def _compute_progress_overdue(conn, projects, today):
+    """给 projects 注入 overdue 标记，返回 (progress_map, overdue_set)。"""
+    prog_rows = conn.execute(
+        "SELECT project_id, COUNT(*) AS total, COALESCE(SUM(done),0) AS done "
+        "FROM project_milestones GROUP BY project_id"
+    ).fetchall()
+    progress_map = {
+        r["project_id"]: (r["done"] / r["total"] * 100) if r["total"] else 0
+        for r in prog_rows
+    }
+    overdue_rows = conn.execute(
+        "SELECT DISTINCT project_id FROM project_milestones "
+        "WHERE done=0 AND due_date IS NOT NULL AND due_date < ?",
+        (today.isoformat(),),
+    ).fetchall()
+    overdue_set = {r["project_id"] for r in overdue_rows}
+    for p in projects:
+        p["overdue"] = p["id"] in overdue_set
+    return progress_map, overdue_set
+
+
+def _upcoming_milestones(conn, project_ids, today, days=7, limit=6):
+    """近期待办里程碑（未完成的未来 N 天），替换原写死的假时间轴数据。"""
+    end = (today + timedelta(days=days)).isoformat()
+    if project_ids is None:
+        rows = conn.execute(
+            "SELECT m.name, m.due_date, p.name AS project_name, p.id AS project_id "
+            "FROM project_milestones m JOIN projects p ON m.project_id=p.id "
+            "WHERE m.done=0 AND m.due_date IS NOT NULL AND m.due_date BETWEEN ? AND ? "
+            "ORDER BY m.due_date ASC LIMIT ?",
+            (today.isoformat(), end, limit),
+        ).fetchall()
+    elif project_ids:
+        ph = ",".join("?" * len(project_ids))
+        rows = conn.execute(
+            f"SELECT m.name, m.due_date, p.name AS project_name, p.id AS project_id "
+            f"FROM project_milestones m JOIN projects p ON m.project_id=p.id "
+            f"WHERE m.done=0 AND m.due_date IS NOT NULL AND m.due_date BETWEEN ? AND ? "
+            f"AND m.project_id IN ({ph}) ORDER BY m.due_date ASC LIMIT ?",
+            (today.isoformat(), end, *project_ids, limit),
+        ).fetchall()
+    else:
+        rows = []
+    out = []
+    for r in rows:
+        due = r["due_date"]
+        try:
+            d = date.fromisoformat(due)
+            left = (d - today).days
+        except Exception:
+            d, left = None, 999
+        color = "var(--color-error)" if left < 0 else ("var(--color-warning)" if left <= 3 else "var(--color-info)")
+        label = f"{d.month}月{d.day}日" if d else (due or "")
+        out.append({
+            "time": label,
+            "event": f"{r['project_name']} · {r['name']}",
+            "color": color,
+            "link": f"/app/projects/{r['project_id']}",
+        })
+    return out
 
 
 # ───────────────────────── 重点项目持久化 ─────────────────────────
@@ -234,75 +342,11 @@ def _build_key_projects(projects, progress_map, today, max_amount, prefs):
 
 def _render_dashboard(request: Request, user: dict):
     today = date.today()
-    week_end = today + timedelta(days=7)
     project_ids = get_accessible_project_ids(user)
 
     with db_session() as conn:
-        if project_ids is None:
-            projects = rows_to_list(
-                conn.execute(
-                    "SELECT p.*, c.name as client_name FROM projects p "
-                    "LEFT JOIN clients c ON p.client_id = c.id "
-                    "ORDER BY p.updated_at DESC"
-                ).fetchall()
-            )
-            active_count = conn.execute(
-                "SELECT COUNT(*) FROM projects WHERE status NOT IN ('done', 'lead')"
-            ).fetchone()[0]
-            due_this_week = conn.execute(
-                "SELECT COUNT(*) FROM projects WHERE deadline BETWEEN ? AND ? AND status != 'done'",
-                (today.isoformat(), week_end.isoformat()),
-            ).fetchone()[0]
-            pending_payment = conn.execute(
-                "SELECT COALESCE(SUM(amount), 0) FROM invoices WHERE paid = 0"
-            ).fetchone()[0]
-            leads = conn.execute(
-                "SELECT COUNT(*) FROM projects WHERE status = 'lead'"
-            ).fetchone()[0]
-        else:
-            if not project_ids:
-                projects = []
-                active_count = due_this_week = pending_payment = leads = 0
-            else:
-                placeholders = ",".join("?" * len(project_ids))
-                projects = rows_to_list(
-                    conn.execute(
-                        f"""
-                        SELECT p.*, c.name as client_name FROM projects p
-                        LEFT JOIN clients c ON p.client_id = c.id
-                        WHERE p.id IN ({placeholders})
-                        ORDER BY p.updated_at DESC
-                        """,
-                        project_ids,
-                    ).fetchall()
-                )
-                active_count = sum(1 for p in projects if p["status"] not in ("done", "lead"))
-                due_this_week = sum(
-                    1
-                    for p in projects
-                    if p.get("deadline")
-                    and today.isoformat() <= p["deadline"] <= week_end.isoformat()
-                    and p["status"] != "done"
-                )
-                pending_payment = 0
-                leads = sum(1 for p in projects if p["status"] == "lead")
-
-        prog_rows = conn.execute(
-            "SELECT project_id, COUNT(*) AS total, COALESCE(SUM(done), 0) AS done "
-            "FROM project_milestones GROUP BY project_id"
-        ).fetchall()
-        progress_map = {
-            r["project_id"]: (r["done"] / r["total"] * 100) if r["total"] else 0
-            for r in prog_rows
-        }
-        overdue_rows = conn.execute(
-            "SELECT DISTINCT project_id FROM project_milestones "
-            "WHERE done = 0 AND due_date IS NOT NULL AND due_date < ?",
-            (today.isoformat(),),
-        ).fetchall()
-        overdue_set = {r["project_id"] for r in overdue_rows}
-        for p in projects:
-            p["overdue"] = p["id"] in overdue_set
+        projects, active_count, due_this_week, pending_payment, leads = _fetch_projects(conn, project_ids)
+        progress_map, overdue_set = _compute_progress_overdue(conn, projects, today)
 
         max_amount = max(
             [float(p.get("budget_max") or p.get("budget_min") or 0) for p in projects],
@@ -393,23 +437,8 @@ def _render_dashboard(request: Request, user: dict):
             if len(activity) >= 5:
                 break
 
-        # 日历
-        year, month = today.year, today.month
-        month_label = f"{year}年{month}月"
-        first_weekday = (_cal.weekday(year, month, 1) + 1) % 7
-        days_in_month = _cal.monthrange(year, month)[1]
-        cells = [""] * first_weekday + [d for d in range(1, days_in_month + 1)]
-        while len(cells) % 7 != 0:
-            cells.append("")
-        cal_weeks = [cells[i:i + 7] for i in range(0, len(cells), 7)]
-        cal_today = today.day
-
-        timeline = [
-            {"time": "09:00", "event": "团队规划 · 本周排期", "color": "var(--color-warning)"},
-            {"time": "11:30", "event": "Aurora Tower 里程碑评审", "color": "var(--color-info)"},
-            {"time": "14:00", "event": "客户回访 · 新线索跟进", "color": "var(--color-error)"},
-            {"time": "16:30", "event": "提交月度报价单", "color": "var(--color-success)"},
-        ]
+        # 近期里程碑（真实数据，替换原写死时间轴）
+        timeline = _upcoming_milestones(conn, project_ids, today)
 
         quick_actions = [
             {"label": "新建项目", "icon": "folder-plus", "url": "/app/projects/new"},
@@ -450,9 +479,6 @@ def _render_dashboard(request: Request, user: dict):
             "donut_segments": donut_segments,
             "donut_legend": donut_legend,
             "donut_center": len(projects),
-            "calendar": cal_weeks,
-            "month_label": month_label,
-            "cal_today": cal_today,
             "timeline": timeline,
             "quick_actions": quick_actions,
             "promo": promo,
@@ -515,29 +541,8 @@ async def key_projects_action(
 
         # 重新计算并返回最新结构
         project_ids = get_accessible_project_ids(user)
-        if project_ids is None:
-            projects = rows_to_list(conn.execute(
-                "SELECT p.*, c.name as client_name FROM projects p "
-                "LEFT JOIN clients c ON p.client_id = c.id ORDER BY p.updated_at DESC"
-            ).fetchall())
-        elif project_ids:
-            ph = ",".join("?" * len(project_ids))
-            projects = rows_to_list(conn.execute(
-                f"SELECT p.*, c.name as client_name FROM projects p "
-                f"LEFT JOIN clients c ON p.client_id = c.id WHERE p.id IN ({ph}) ORDER BY p.updated_at DESC",
-                project_ids).fetchall())
-        else:
-            projects = []
-        prog_rows = conn.execute(
-            "SELECT project_id, COUNT(*) AS total, COALESCE(SUM(done),0) AS done "
-            "FROM project_milestones GROUP BY project_id").fetchall()
-        progress_map = {r["project_id"]: (r["done"]/r["total"]*100) if r["total"] else 0 for r in prog_rows}
-        overdue_rows = conn.execute(
-            "SELECT DISTINCT project_id FROM project_milestones WHERE done=0 AND due_date IS NOT NULL AND due_date < ?",
-            (date.today().isoformat(),)).fetchall()
-        overdue_set = {r["project_id"] for r in overdue_rows}
-        for p in projects:
-            p["overdue"] = p["id"] in overdue_set
+        projects, _, _, _, _ = _fetch_projects(conn, project_ids)
+        progress_map, overdue_set = _compute_progress_overdue(conn, projects, date.today())
         max_amount = max([float(p.get("budget_max") or p.get("budget_min") or 0) for p in projects], default=0) or 1
         top1, others = _build_key_projects(projects, progress_map, date.today(), max_amount, prefs)
         if top1:
