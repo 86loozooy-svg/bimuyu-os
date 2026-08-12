@@ -1,4 +1,4 @@
-/* Studio OS — 预算追踪 & 物料清单 BOM（独立样式，避免修改全局 halo.css） */
+/* 比目鱼（Bimuyu） — 预算追踪 & 物料清单 BOM（独立样式，避免修改全局 halo.css） */
 .budget-cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));

@@ -1,5 +1,5 @@
 /* ============================================================================
-   cockpit.css — Studio OS 全局驾驶舱（Dashboard 升级为一级入口）
+   cockpit.css — 比目鱼（Bimuyu） 全局驾驶舱（Dashboard 升级为一级入口）
    版本：os 4.01+（2026-08-11）
    设计约束：
    - 严格复用 halo.css 的设计 token（--accent / --card / --border / --text-* / 软色 token），
