@@ -79,7 +79,7 @@ def build_template_bytes(studio: dict) -> bytes:
 
     # 标题行
     ws.merge_cells("A1:L1")
-    ws["A1"] = f"{studio.get('name', 'Studio OS')} · 项目批量导入模板"
+    ws["A1"] = f"{studio.get('name', '比目鱼（Bimuyu）')} · 项目批量导入模板"
     ws["A1"].font = Font(bold=True, size=13)
     ws["A1"].alignment = Alignment(horizontal="center")
     ws.row_dimensions[1].height = 26

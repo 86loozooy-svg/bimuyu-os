@@ -130,7 +130,7 @@ def export_quote_pdf(quote: dict, project: dict, studio: dict) -> bytes:
         font_family = "Helvetica"
 
     pdf.set_font(font_family, size=16)
-    pdf.cell(0, 10, studio.get("name", "Studio OS") or "Studio OS", ln=True)
+    pdf.cell(0, 10, studio.get("name", "比目鱼（Bimuyu）") or "比目鱼（Bimuyu）", ln=True)
     pdf.set_font(font_family, size=12)
     pdf.cell(0, 8, f"项目：{project.get('name', '')}", ln=True)
     pdf.cell(0, 8, f"报价 v{quote.get('version', 1)}  ·  状态：{quote.get('status', 'draft')}", ln=True)
@@ -208,7 +208,7 @@ def export_quote_excel(quote: dict, project: dict, studio: dict) -> bytes:
 
     # --- Title block ---
     ws.merge_cells("A1:E1")
-    ws["A1"] = studio.get("name", "Studio OS") or "Studio OS"
+    ws["A1"] = studio.get("name", "比目鱼（Bimuyu）") or "比目鱼（Bimuyu）"
     ws["A1"].font = Font(bold=True, size=16)
     ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
     ws.row_dimensions[1].height = 30
@@ -320,7 +320,7 @@ def export_quote_word(quote: dict, project: dict, studio: dict) -> bytes:
     doc = Document()
 
     # --- Title ---
-    title = doc.add_heading(studio.get("name", "Studio OS") or "Studio OS", level=0)
+    title = doc.add_heading(studio.get("name", "比目鱼（Bimuyu）") or "比目鱼（Bimuyu）", level=0)
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     # --- Subtitle ---

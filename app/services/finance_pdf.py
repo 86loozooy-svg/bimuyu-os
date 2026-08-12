@@ -22,7 +22,7 @@ def build_finance_pdf(project: dict, pnl: dict, curve: list, studio: dict) -> by
     else:
         ff = "Helvetica"
 
-    studio_name = (studio or {}).get("name") or "Studio OS"
+    studio_name = (studio or {}).get("name") or "比目鱼（Bimuyu）"
     proj_name = project.get("name", "")
     proj_code = project.get("code", "")
 

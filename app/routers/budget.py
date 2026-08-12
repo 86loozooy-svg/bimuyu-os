@@ -477,7 +477,7 @@ def export_bom_excel(materials: list, project: dict, studio: dict) -> bytes:
         ws = wb[cat[:31]]
         ws.merge_cells("A1:I1")
         ws["A1"] = (
-            f"{studio.get('name', 'Studio OS')} · {project.get('name', '')} · 物料清单（{cat}）"
+            f"{studio.get('name', '比目鱼（Bimuyu）')} · {project.get('name', '')} · 物料清单（{cat}）"
         )
         ws["A1"].font = Font(bold=True, size=13)
         ws["A1"].alignment = Alignment(horizontal="center")
@@ -539,7 +539,7 @@ def export_bom_pdf(materials: list, project: dict, studio: dict) -> bytes:
         ff = "Helvetica"
 
     pdf.set_font(ff, size=15)
-    pdf.cell(0, 9, studio.get("name", "Studio OS") or "Studio OS", ln=True)
+    pdf.cell(0, 9, studio.get("name", "比目鱼（Bimuyu）") or "比目鱼（Bimuyu）", ln=True)
     pdf.set_font(ff, size=11)
     pdf.cell(0, 7, f"物料清单 (BOM) · {project.get('name', '')} · {project.get('code', '')}", ln=True)
     pdf.ln(3)

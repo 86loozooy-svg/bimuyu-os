@@ -6,7 +6,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.config import BASE_DIR
 from app.routers import account, app_auth, app_dashboard, budget, calculator, catalog, cost_estimate, library, notifications, onboarding, placeholders, projects, public, quotes, settings, share, tasks, workers
 
-app = FastAPI(title="Studio OS", version="1.0.0", docs_url=None, redoc_url=None)
+app = FastAPI(title="比目鱼（Bimuyu）", version="1.0.0", docs_url=None, redoc_url=None)
 
 static_dir = BASE_DIR / "static"
 static_dir.mkdir(parents=True, exist_ok=True)

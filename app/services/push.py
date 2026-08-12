@@ -78,7 +78,7 @@ def _send_email(text: str, cfg: dict) -> bool:
         port = int(cfg.get("notify_email_smtp_port") or 465)
         frm = cfg.get("notify_email_from") or user
         msg = MIMEText(text, "plain", "utf-8")
-        msg["Subject"] = "Studio OS 每日待办提醒"
+        msg["Subject"] = "比目鱼（Bimuyu） 每日待办提醒"
         msg["From"] = frm
         msg["To"] = to
         with smtplib.SMTP_SSL(host, port, timeout=10) as server:
@@ -106,7 +106,7 @@ def send_push(message: str, cfg: dict) -> dict:
 def build_daily_message(tasks: list[dict], today: str) -> str:
     overdue = [t for t in tasks if t.get("due_date") and t["due_date"] < today]
     due_today = [t for t in tasks if t.get("due_date") == today]
-    lines = [f"Studio OS 每日待办提醒（{today}）", ""]
+    lines = [f"比目鱼（Bimuyu） 每日待办提醒（{today}）", ""]
     if overdue:
         lines.append("⏰ 已逾期：")
         for t in overdue:

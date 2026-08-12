@@ -519,7 +519,7 @@ def ensure_notifications() -> None:
                 (
                     1,
                     "announcement",
-                    "欢迎使用 Studio OS 消息中心",
+                    "欢迎使用 比目鱼（Bimuyu） 消息中心",
                     "项目阶段流转、发票到期等事件将在此推送，点击右上角铃铛查看。",
                     "/app/notifications",
                 ),
@@ -535,7 +535,7 @@ def seed_data() -> None:
             conn.execute(
                 """
                 INSERT INTO studio_profile (id, name, description, revision_policy)
-                VALUES (1, 'Studio OS 设计工作室',
+                VALUES (1, '比目鱼（Bimuyu） 设计工作室',
                         '专注工装空间、岛式美陈、品牌零售与餐饮空间设计。',
                         '包含 2 轮修改，超出按轮收费')
                 """
@@ -716,7 +716,7 @@ def seed_data() -> None:
                 (
                     """## 我们是谁
 
-Studio OS 设计工作室由一位独立设计师主理，专注工装空间、岛式美陈、品牌零售与餐饮空间设计。
+比目鱼（Bimuyu） 设计工作室由一位独立设计师主理，专注工装空间、岛式美陈、品牌零售与餐饮空间设计。
 
 ## 服务范围
 
@@ -851,7 +851,7 @@ def main() -> None:
     _migrate_schema()
     seed_data()
     print("✓ 数据库初始化完成")
-    print(f"  路径: {BASE_DIR / 'data' / 'db' / 'studio.db'}")
+    print(f"  路径: {BASE_DIR / 'data' / 'db' / 'bimuyu.db'}")
     print(f"  Admin: {DEFAULT_ADMIN_EMAIL} / {DEFAULT_ADMIN_PASSWORD}")
 
 
