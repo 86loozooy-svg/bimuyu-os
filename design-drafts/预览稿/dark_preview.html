@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VSCENE · 暗色预览 Demo</title>
+  <!-- 引用真实主站样式，确保预览即真实观感 -->
+  <link rel="stylesheet" href="http://localhost:8013/static/css/style.css">
+  <link rel="stylesheet" href="http://localhost:8013/static/css/case_layout.css">
+  <style>
+    /* demo 本地微调：仅用于预览排版，不影响主站 */
+    body { margin: 0; }
+    .demo-banner {
+      background: var(--case-accent, #c8ff00);
+      color: #16140f;
+      font-family: var(--font-display, sans-serif);
+      font-size: 13px;
+      text-align: center;
+      padding: 8px 16px;
+      letter-spacing: .02em;
+    }
+    /* 案例预览用静态网格，避免依赖匀速滚动 JS */
+    .demo-cases {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 28px;
+    }
+    @media (max-width: 768px) { .demo-cases { grid-template-columns: repeat(2, 1fr); } }
+    /* 切换按钮（放在 header 工作台左侧） */
+    .theme-toggle {
+      font-family: var(--font-display, sans-serif);
+      font-size: 14px;
+      padding: 8px 14px;
+      border-radius: 100px;
+      border: 1px solid var(--border, rgba(26,22,20,.15));
+      background: transparent;
+      color: var(--text, #1c201d);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all .2s ease;
+      white-space: nowrap;
+    }
+    .theme-toggle:hover { border-color: var(--accent, #63615A); }
+    .nav-right { display: flex; align-items: center; gap: 10px; }
+  </style>
+</head>
+<body>
+  <div class="demo-banner">🎨 暗色预览 Demo · 点击右上角「🌙 暗色 / ☀️ 亮色」切换 · 此页仅用于确认调性，满意后落地主站</div>
+
+  <!-- ===== Header ===== -->
+  <header class="site-header">
+    <div class="nav-three-col container">
+      <nav class="nav-left">
+        <a href="/">首页</a>
+        <a href="/projects">案例</a>
+        <a href="/news">动态</a>
+        <a href="/about">关于</a>
+      </nav>
+      <button class="nav-toggle" aria-label="菜单">
+        <span class="nav-toggle-bar"></span>
+        <span class="nav-toggle-bar"></span>
+        <span class="nav-toggle-bar"></span>
+      </button>
+      <a href="/" class="logo-center">
+        <img class="brand-logo" src="http://localhost:8013/static/img/logo.svg" alt="VSCENE">
+      </a>
+      <div class="nav-right">
+        <button id="themeToggle" class="theme-toggle" type="button" aria-label="切换明暗主题">🌙 暗色</button>
+        <a href="/studio" class="animated-button nav-cta"><span class="text">工作台</span></a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== Hero / STUDIO NOTE ===== -->
+  <section class="hero">
+    <div class="hero-stage">
+      <div class="hero-image" style="background: linear-gradient(135deg, #3b332a 0%, #6b5d4f 50%, #2e2823 100%);">
+        <div class="hero-overlay">
+          <div class="hero-track">
+            <div class="hero-slide active">
+              <span class="eyebrow">STUDIO NOTE</span>
+              <h1 class="hero-title">好空间应当同时服务于品牌、人与经营</h1>
+              <p class="hero-sub">近期我们聚焦于零售动线、餐饮体验与岛式美陈系统的重构，让空间不仅是视觉作品，也是可运转的商业场景。</p>
+              <a href="/news" class="animated-button hero-cta">
+                <span class="text">阅读近期动态</span>
+                <span class="arrow-slot">
+                  <svg class="arr-1" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <svg class="arr-2" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+                <span class="circle"></span>
+              </a>
+            </div>
+          </div>
+        </div>
+        <button class="hero-arrow prev" type="button" aria-label="上一条动态">&#8249;</button>
+        <button class="hero-arrow next" type="button" aria-label="下一条动态">&#8250;</button>
+      </div>
+    </div>
+    <div class="dots hero-dots">
+      <button class="dot active" type="button" aria-label="第 1 条动态"></button>
+      <button class="dot" type="button" aria-label="第 2 条动态"></button>
+      <button class="dot" type="button" aria-label="第 3 条动态"></button>
+    </div>
+  </section>
+
+  <!-- ===== 案例展示 ===== -->
+  <section class="cases-section">
+    <div class="container">
+      <div class="section-head" style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px">
+        <h2 class="section-title">案例展示 <span>Projects</span></h2>
+        <a href="/projects" class="case-more">查看更多案例 →</a>
+      </div>
+      <div class="demo-cases">
+        <div class="case-card" style="aspect-ratio:1/1"></div>
+        <div class="case-card" style="aspect-ratio:3/4"></div>
+        <div class="case-card" style="aspect-ratio:16/9"></div>
+        <div class="case-card" style="aspect-ratio:3/4"></div>
+        <div class="case-card" style="aspect-ratio:1/1"></div>
+        <div class="case-card" style="aspect-ratio:16/9"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 能力版图 ===== -->
+  <section class="biz-section">
+    <div class="container">
+      <h2 class="section-title">能力版图 <span>Capabilities</span></h2>
+      <div class="biz-carousel" id="bizCarousel">
+        <article class="biz-slide active">
+          <div class="biz-media">
+            <img src="http://localhost:8013/static/img/biz/creative.svg" alt="">
+          </div>
+          <div class="biz-overlay">
+            <span class="biz-eyebrow">CREATIVE DESIGN</span>
+            <h3 class="biz-title">创意视觉</h3>
+            <p class="biz-desc">从品牌策略到空间落地，我们提供一体化的视觉解决方案，让每一个商业空间都成为品牌的最佳表达。</p>
+            <a href="/about" class="biz-btn">了解更多 →</a>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Footer ===== -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-contact">
+        <a href="/contact" class="contact-btn">预约咨询</a>
+        <a href="mailto:hello@vsence.studio" class="contact-btn">hello@vsence.studio</a>
+      </div>
+      <p class="footer-copy">© 2026 VSCENE 问世创意设计事务所</p>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      var root = document.documentElement;
+      var btn = document.getElementById('themeToggle');
+      var KEY = 'vsence-theme';
+      var saved = localStorage.getItem(KEY);
+      var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var theme = saved || (prefersDark ? 'dark' : 'light');
+      apply(theme);
+      function apply(t) {
+        root.setAttribute('data-theme', t);
+        btn.textContent = t === 'dark' ? '☀️ 亮色' : '🌙 暗色';
+      }
+      btn.addEventListener('click', function () {
+        var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        localStorage.setItem(KEY, next);
+        apply(next);
+      });
+    })();
+  </script>
+</body>
+</html>
