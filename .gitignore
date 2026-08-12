@@ -28,7 +28,7 @@ Thumbs.db
 # Uploads (keep dir, ignore files)
 static/uploads/*
 !static/uploads/.gitkeep
-data/studio.db
+data/bimuyu.db
 
 # Scratch / design backups / local helpers (do not commit)
 _design_backup_*/

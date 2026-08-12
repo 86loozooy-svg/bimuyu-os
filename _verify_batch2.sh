@@ -7,7 +7,7 @@ rm -f "$CJ"
 TODAY=$(date +%F)
 
 echo "== 1. 登录 =="
-code=$(curl -s -c "$CJ" -o /dev/null -w "%{http_code}" -X POST "$BASE/app/login" --data "identifier=admin@studio.local&password=admin123")
+code=$(curl -s -c "$CJ" -o /dev/null -w "%{http_code}" -X POST "$BASE/app/login" --data "identifier=admin@bimuyu.work&password=admin123")
 echo "login http=$code"
 
 echo "== 2. 工人通讯录页 / 待办页 / 通知配置 Tab 加载 =="
