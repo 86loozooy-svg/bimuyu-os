@@ -1,8 +1,8 @@
-# Studio OS — 设计规范（os 4.01）
+# 比目鱼（Bimuyu） — 设计规范（os 4.01）
 
 > **版本代号**：os 4.01（halo.css v19）
 > **状态**：🔒 已冻结（frozen）。任何改动须先经 Jerry 确认。
-> **权威实现**：`static/css/halo.css`（== `studio_os_redesign_release/workbench-reference-vision.html` 整页参考的忠实移植）
+> **权威实现**：`static/css/halo.css`（== `bimuyu_os_redesign_release/workbench-reference-vision.html` 整页参考的忠实移植）
 > **适用范围**：全站（含 dashboard / kanban / projects / quotes / quotations / cost / materials / contacts / members / public / modules / account 等所有视图与二级页面）
 > **最后更新**：2026-08-11
 
@@ -213,7 +213,7 @@
 - **工作台新增（隔离）**：`static/css/cockpit.css`（v1，置于 halo.css 之后）
 - **导航/页头**：`templates/app/base.html`（`_title_map`：工作台 / Dashboard 一级置顶 + 1px 分割线 + home 图标 + 青柠 2px 左边线）
 - **工作台页面**：`templates/app/dashboard.html` + `app/routers/app_dashboard.py`
-- **服务**：uvicorn 端口 `8013`，绑 `0.0.0.0`；凭据 `admin@studio.local / admin123`
+- **服务**：uvicorn 端口 `8013`，绑 `0.0.0.0`；凭据 `admin@bimuyu.work / admin123`
 
 ### 版本演进（概要）
 
