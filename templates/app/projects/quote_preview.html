@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ studio.name or 'Studio OS' }} — 报价单 {{ project.code }} v{{ quote.version }}</title>
+  <title>{{ studio.name or '比目鱼（Bimuyu）' }} — 报价单 {{ project.code }} v{{ quote.version }}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -179,7 +179,7 @@
     <!-- Header -->
     <div class="doc-header">
       <div>
-        <div class="studio-name">{{ studio.name or 'Studio OS' }}</div>
+        <div class="studio-name">{{ studio.name or '比目鱼（Bimuyu）' }}</div>
         {% if studio.address %}<div class="studio-info">{{ studio.address }}</div>{% endif %}
         {% if studio.email_signature %}<div class="studio-info">{{ studio.email_signature }}</div>{% endif %}
       </div>
