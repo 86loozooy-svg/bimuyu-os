@@ -47,7 +47,7 @@
   </a>
   {% endfor %}
 
-  {# ── 重点项目栏目（通栏 12 列：TOP1 通栏 + 下层三栏自适应） ── #}
+  {# ── 重点项目栏目（8 列：TOP1 通栏 + 下层三栏自适应） ── #}
   <section class="bento-card bento-kp">
     <h3 class="bento-title">
       <span class="pill pill-accent">重点项目</span>
@@ -56,6 +56,48 @@
     <div id="kpTop"></div>
     <div class="kp-divider"></div>
     <div id="kpBottom" class="kp-bottom"></div>
+  </section>
+
+  {# ── 日历 + 今日时间轴（4 列，真实里程碑数据） ── #}
+  <section class="bento-card bento-cal">
+    <div class="wb-cal__head">
+      <span>{{ month_label }}</span>
+      <span class="wb-cal__arrows">
+        <a href="?month={{ prev_month }}" title="上个月">‹</a>
+        <a href="?month={{ next_month }}" title="下个月">›</a>
+      </span>
+    </div>
+    <div class="wb-cal__grid">
+      <div class="h">日</div><div class="h">一</div><div class="h">二</div><div class="h">三</div>
+      <div class="h">四</div><div class="h">五</div><div class="h">六</div>
+      {% for week in cal_weeks %}
+        {% for d in week %}
+          {% if d %}
+          <div class="d{% if d == cal_today %} is-today{% endif %}{% if d in milestone_days %} has-event{% endif %}">{{ d }}</div>
+          {% else %}
+          <div class="d empty"></div>
+          {% endif %}
+        {% endfor %}
+      {% endfor %}
+    </div>
+    <div class="wb-cal__bar">
+      <a class="wb-cal__cbtn" href="/app/projects/new"><i data-lucide="plus"></i>添加事件</a>
+      <a class="wb-cal__cbtn" href="/app/projects" title="查看项目"><i data-lucide="calendar"></i></a>
+    </div>
+
+    <h3 class="bento-title" style="margin-top:14px;">今日时间轴｜{{ month_label }}</h3>
+    <div class="wb-tl">
+      {% for it in timeline %}
+      <div class="wb-tl__it">
+        <span class="wb-tl__dot" style="background:{{ it.color }}"></span>
+        <span class="wb-tl__t">{{ it.time }}</span>
+        {% if it.link %}<a class="wb-tl__e" href="{{ it.link }}">{{ it.event }}</a>{% else %}<span class="wb-tl__e">{{ it.event }}</span>{% endif %}
+      </div>
+      {% else %}
+      <div class="activity-empty">未来 7 天暂无待办里程碑</div>
+      {% endfor %}
+    </div>
+    <a class="wb-cal__viewall" href="/app/projects">查看全部详情</a>
   </section>
 
   {# ── 项目状态分布（SVG 饼图 ≥140px + 竖向图例） ── #}
@@ -86,23 +128,6 @@
         {% endfor %}
       </div>
     </div>
-  </section>
-
-  {# ── 近期里程碑（真实数据，可点击跳转） ── #}
-  <section class="bento-card bento-timeline">
-    <h3 class="bento-title">近期里程碑</h3>
-    <div class="wb-tl">
-      {% for it in timeline %}
-      <div class="wb-tl__it">
-        <span class="wb-tl__dot" style="background:{{ it.color }}"></span>
-        <span class="wb-tl__t">{{ it.time }}</span>
-        {% if it.link %}<a class="wb-tl__e" href="{{ it.link }}">{{ it.event }}</a>{% else %}<span class="wb-tl__e">{{ it.event }}</span>{% endif %}
-      </div>
-      {% else %}
-      <div class="activity-empty">未来 7 天暂无待办里程碑</div>
-      {% endfor %}
-    </div>
-    <a class="wb-cal__viewall" href="/app/projects">查看全部项目</a>
   </section>
 
   {# ── 最近动态流 ── #}

@@ -1,3 +1,4 @@
+import calendar as _cal
 import json
 import math
 from datetime import date, timedelta
@@ -340,13 +341,67 @@ def _build_key_projects(projects, progress_map, today, max_amount, prefs):
     return top1, others
 
 
+def _month_bounds(year: int, month: int):
+    """返回某月第一天和下月第一天的 iso 日期字符串（用于 SQL 范围查询）。"""
+    start = date(year, month, 1).isoformat()
+    if month == 12:
+        end = date(year + 1, 1, 1).isoformat()
+    else:
+        end = date(year, month + 1, 1).isoformat()
+    return start, end
+
+
 def _render_dashboard(request: Request, user: dict):
     today = date.today()
+    # 月份导航：默认当月，可通过 ?month=2026-08 切换
+    month_param = request.query_params.get("month")
+    if month_param:
+        try:
+            y, m = map(int, month_param.split("-"))
+            view_month = date(y, m, 1)
+        except Exception:
+            view_month = date(today.year, today.month, 1)
+    else:
+        view_month = date(today.year, today.month, 1)
+    year, month = view_month.year, view_month.month
+    month_label = f"{year}年{month}月"
+    prev_month = f"{year if month > 1 else year - 1}-{(month - 1) if month > 1 else 12:02d}"
+    next_month = f"{year if month < 12 else year + 1}-{(month + 1) if month < 12 else 1:02d}"
+
+    # 日历网格（周日开头，与截图一致）
+    first_weekday = (_cal.weekday(year, month, 1) + 1) % 7
+    days_in_month = _cal.monthrange(year, month)[1]
+    cells = [""] * first_weekday + list(range(1, days_in_month + 1))
+    while len(cells) % 7 != 0:
+        cells.append("")
+    cal_weeks = [cells[i:i + 7] for i in range(0, len(cells), 7)]
+    cal_today = today.day if (today.year == year and today.month == month) else None
+
     project_ids = get_accessible_project_ids(user)
 
     with db_session() as conn:
         projects, active_count, due_this_week, pending_payment, leads = _fetch_projects(conn, project_ids)
         progress_map, overdue_set = _compute_progress_overdue(conn, projects, today)
+
+        # 当月有未完成里程碑的日期（高亮用）
+        month_start, month_end = _month_bounds(year, month)
+        if project_ids is None:
+            ms_rows = conn.execute(
+                "SELECT DISTINCT strftime('%d', due_date) AS d FROM project_milestones "
+                "WHERE done=0 AND due_date IS NOT NULL AND due_date >= ? AND due_date < ?",
+                (month_start, month_end),
+            ).fetchall()
+        elif project_ids:
+            ph = ",".join("?" * len(project_ids))
+            ms_rows = conn.execute(
+                f"SELECT DISTINCT strftime('%d', due_date) AS d FROM project_milestones "
+                f"WHERE done=0 AND due_date IS NOT NULL AND due_date >= ? AND due_date < ? "
+                f"AND project_id IN ({ph})",
+                (month_start, month_end, *project_ids),
+            ).fetchall()
+        else:
+            ms_rows = []
+        milestone_days = {int(r["d"]) for r in ms_rows if r["d"] and r["d"].isdigit()}
 
         max_amount = max(
             [float(p.get("budget_max") or p.get("budget_min") or 0) for p in projects],
@@ -480,6 +535,13 @@ def _render_dashboard(request: Request, user: dict):
             "donut_legend": donut_legend,
             "donut_center": len(projects),
             "timeline": timeline,
+            "month_label": month_label,
+            "cal_weeks": cal_weeks,
+            "cal_today": cal_today,
+            "milestone_days": milestone_days,
+            "prev_month": prev_month,
+            "next_month": next_month,
+            "view_month": f"{year}-{month:02d}",
             "quick_actions": quick_actions,
             "promo": promo,
             "activity": activity,
