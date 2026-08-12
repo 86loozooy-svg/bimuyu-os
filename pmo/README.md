@@ -1,4 +1,4 @@
-# Studio OS · PMO 工作台
+# 比目鱼（Bimuyu） · PMO 工作台
 
 项目宪法驱动的轻量项目管理中枢。所有规则以 [`CONSTITUTION.md`](./CONSTITUTION.md) 为唯一事实来源。
 
@@ -17,7 +17,7 @@
 - `截图/` — 关键设计截图（侧边栏 / Bento Grid / 插件入口），待补充
 
 ## 自动化与技能
-- **每周日自动化**：备份 `studio.db` + 8013 可达性自检 + 异常提醒（WorkBuddy Automation）
+- **每周日自动化**：备份 `bimuyu.db` + 8013 可达性自检 + 异常提醒（WorkBuddy Automation）
 - **技能 `studio-os-start-8013`**：`~/.workbuddy/skills/studio-os-start-8013` — 拉起 8013 → 等端口 → curl 验证 → 回报状态
 
 ## 全局约束（不可违反）

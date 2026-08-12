@@ -1,4 +1,4 @@
-# Studio OS
+# 比目鱼（Bimuyu）
 
 一人设计工作室 AI 管理工具 — 对外展示站 + 对内管理后台。
 
@@ -6,7 +6,7 @@
 
 ```bash
 # 1. 进入项目目录
-cd ~/Desktop/studio-os
+cd ~/Desktop/bimuyu-os
 
 # 2. 创建虚拟环境（推荐，只需第一次）
 python3 -m venv venv
@@ -33,7 +33,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ## 默认登录账号
 
-- **邮箱**：`admin@studio.local`
+- **邮箱**：`admin@bimuyu.work`
 - **密码**：`admin123`
 
 ## 停止服务
@@ -43,7 +43,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ## 项目结构
 
 ```
-studio-os/
+bimuyu-os/
 ├── app/           # 后端代码
 ├── templates/     # 页面模板
 ├── static/        # CSS、图片
