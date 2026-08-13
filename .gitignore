@@ -43,3 +43,7 @@ logo_视觉 1.svg
 # Local scratch previews / stray images
 preview_workbench.html
 wangge.jpg
+
+# Phase B：数据库不入库（本地由 init_db 自动生成，避免二进制 diff）
+*.db
+bimuyu.db
