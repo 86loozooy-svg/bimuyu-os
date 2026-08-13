@@ -1,5 +1,7 @@
 # bimuyu-os · 比目鱼（Bimuyu）
 
+> 官网：[比目鱼 Bimuyu](https://bimuyu.work)
+
 由 Studio OS 派生而来的**比目鱼品牌操作系统** —— 一人设计工作室的 AI 管理工具：对外展示站 + 对内管理后台。
 
 ## 快速开始
@@ -52,4 +54,8 @@ bimuyu-os/
 
 ## CI
 
-推送至 `bimuyu-os` 分支会触发 GitHub Actions（`.github/workflows/ci.yml`）：Python 3.11 + 安装依赖 + 运行 pytest。
+推送至 `main` 分支（或对其发起 PR）会触发 GitHub Actions（`.github/workflows/ci.yml`）：Python 3.10 + 安装依赖 + flake8 致命错误检查（非阻塞）+ 运行 pytest。
+
+## 部署
+
+参见 [DEPLOY.md](./DEPLOY.md)：本地 uvicorn / Docker / Vercel（含 SQLite 持久化限制说明）三种方式。

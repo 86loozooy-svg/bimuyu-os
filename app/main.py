@@ -2,11 +2,25 @@ from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
+from contextlib import asynccontextmanager
 
 from app.config import BASE_DIR
 from app.routers import account, app_auth, app_dashboard, budget, calculator, catalog, cost_estimate, library, notifications, onboarding, placeholders, projects, public, quotes, settings, share, tasks, workers
 
-app = FastAPI(title="比目鱼（Bimuyu）", version="1.0.0", docs_url=None, redoc_url=None)
+@asynccontextmanager
+async def lifespan(app: "FastAPI"):
+    """应用生命周期：启动期幂等建表/迁移 + 启动调度器；关闭期关停调度器。"""
+    _run_startup_migrations()
+    sched = _startup_scheduler()
+    yield
+    if sched is not None:
+        try:
+            sched.shutdown(wait=False)
+        except Exception:  # noqa: BLE001
+            pass
+
+
+app = FastAPI(title="比目鱼（Bimuyu）", version="1.0.0", docs_url=None, redoc_url=None, lifespan=lifespan)
 
 static_dir = BASE_DIR / "static"
 static_dir.mkdir(parents=True, exist_ok=True)
@@ -60,8 +74,7 @@ app.include_router(onboarding.router)
 app.include_router(account.router)
 
 
-@app.on_event("startup")
-def _startup_ensure_schema() -> None:
+def _run_startup_migrations() -> None:
     """启动时幂等建表 + 补齐 account 列，确保旧库一启动就拥有全部表结构。"""
     try:
         from app.init_db import init_schema
@@ -108,13 +121,14 @@ def _startup_ensure_schema() -> None:
         import logging
 
         logging.getLogger("uvicorn.error").warning("迁移脚本跳过: %s", exc)
-    _startup_scheduler()
 
 
-def _startup_scheduler() -> None:
-    """启动 APScheduler：每日按 notify_push_time（默认 08:00）扫描到期待办并推送。"""
+def _startup_scheduler():
+    """启动 APScheduler：每日按 notify_push_time（默认 08:00）扫描到期待办并推送。
+
+    返回调度器实例，由 lifespan 在应用关闭时统一关停；启动失败返回 None。
+    """
     try:
-        import atexit
         import logging
 
         from apscheduler.schedulers.background import BackgroundScheduler
@@ -157,11 +171,12 @@ def _startup_scheduler() -> None:
         logging.getLogger("uvicorn.error").info(
             "调度器已启动：每日 %02d:%02d 扫描待办推送；03:00 重算项目损益", hour, minute
         )
-        atexit.register(lambda: sched.shutdown(wait=False))
+        return sched
     except Exception as exc:  # noqa: BLE001
         import logging
 
         logging.getLogger("uvicorn.error").warning("调度器启动跳过: %s", exc)
+        return None
 
 
 @app.get("/health")
