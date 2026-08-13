@@ -22,3 +22,7 @@
 [2026-08-12] [修复] 补齐 `requirements.txt` 遗漏的 `httpx==0.28.1`（`app/routers/cost_estimate.py` 依赖）—— 该缺失被重建 venv 暴露，原环境靠历史手工安装掩盖，换机器必炸。
 
 [2026-08-12] [里程碑] 技能 `bimuyu-os-start-8013` 建立（含"沙箱会回收 nohup 后台进程，启动与验证必须同一 bash 调用内完成"的修正）；旧技能 `studio-os-start-8013` 标记为冻结存档。
+
+[2026-08-12] [更正] 撤回第 16 行"grep Studio OS 残留 0"的不严谨表述，实测分三层：(a) 产物源码/模板/配置/库活数据 **0 残留**；(b) 数据库文件 `bimuyu.db` 二进制曾检出 4 处旧名（3×Studio OS + 1×studio.local），实为 SQLite freelist 空闲页幽灵字节，经 `VACUUM` 重建后实测 **0 残留**（提交 ceed354）；(c) `pmo/ACTIVITY.md`（本历史日志）与 `.git/logs` reflog 含旧名属正常（历史叙述 + git 元数据），非产品缺陷。另更正第 20 行登录口令：实测口令为 `admin123`（identifier=`admin@bimuyu.work`），非 `admin`。
+
+[2026-08-13] [自检] **独立重验 Phase A 全绿**（应 Jerry 要求，不沿用旧结论）：tag/分支正确——studio-os 与 bimuyu-os 均含 `v0-original-studio-os` + `archive/studio-os-origin`，HEAD 分别为 `40cd28c`/`ceed354`；产物代码/模板/配置/库活数据 0 品牌残留；`import app.main` 全解析 OK；项目无 CI/Docker/pyproject/setup，此类旧引用不适用；唯一未覆盖变体 `init_db.py` 联系信息默认 seed `studio_design` 已修为 `bimuyu_design`（品牌根残留，存量 contact.json 为真实值不受影响）。可达性复测全绿。结论：可安全进入下一阶段。

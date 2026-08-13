@@ -833,7 +833,7 @@ def ensure_data_dirs() -> None:
         CONTACT_PATH.write_text(
             json.dumps(
                 {
-                    "wechat": "studio_design",
+                    "wechat": "bimuyu_design",
                     "xiaohongshu_url": "https://www.xiaohongshu.com",
                     "douyin_url": "https://www.douyin.com",
                     "phone": "13800000000",
